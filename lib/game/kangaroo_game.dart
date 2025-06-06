@@ -247,12 +247,26 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       score = (distanceTraveled / 25).round();
       uiOverlay.updateScore(score);
       
-      // Increase game speed gradually based on score
-      speedMultiplier = 1.0 + (score / 500) * 0.5; // Speed increases every 500 points
-      gameSpeed = baseSpeed * speedMultiplier;
-      
-      // Cap maximum speed
-      if (gameSpeed > 600) gameSpeed = 600;
+      // Increase game speed gradually based on score (slower progression)
+      if (score < 1000) {
+        // 250 to 450 over first 1000 points
+        gameSpeed = 250 + (score / 1000) * 200;
+      } else if (score < 1500) {
+        // 450 to 500 over next 500 points
+        gameSpeed = 450 + ((score - 1000) / 500) * 50;
+      } else if (score < 2000) {
+        // 500 to 550 over next 500 points
+        gameSpeed = 500 + ((score - 1500) / 500) * 50;
+      } else if (score < 2500) {
+        // 550 to 600 over next 500 points
+        gameSpeed = 550 + ((score - 2000) / 500) * 50;
+      } else if (score < 3500) {
+        // 600 to 700 over next 1000 points
+        gameSpeed = 600 + ((score - 2500) / 1000) * 100;
+      } else {
+        // Cap at 700 after score 3500
+        gameSpeed = 700;
+      }
       
       // Update all moving components with new speed
       ground.gameSpeed = gameSpeed;
@@ -394,9 +408,11 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       case PowerUpType.doubleJump:
         hasDoubleJump = true;
         kangaroo.hasDoubleJump = true;
+        kangaroo.activateDoubleJumpIndicator();
         Future.delayed(const Duration(seconds: 10), () {
           hasDoubleJump = false;
           kangaroo.hasDoubleJump = false;
+          kangaroo.removeDoubleJumpIndicator();
         });
         break;
       case PowerUpType.shield:
@@ -409,15 +425,10 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         break;
       case PowerUpType.magnet:
         isMagnetActive = true;
+        kangaroo.activateMagnetIndicator();
         Future.delayed(const Duration(seconds: 10), () {
           isMagnetActive = false;
-        });
-        break;
-      case PowerUpType.speed:
-        final oldMultiplier = speedMultiplier;
-        speedMultiplier *= 1.5;
-        Future.delayed(const Duration(seconds: 5), () {
-          speedMultiplier = oldMultiplier;
+          kangaroo.removeMagnetIndicator();
         });
         break;
     }
@@ -453,7 +464,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
             position: Vector2.zero(),
             child: CircleParticle(
               radius: random.nextDouble() * 5 + 2,
-              paint: Paint()..color = Colors.orange.withOpacity(0.8),
+              paint: Paint()..color = Colors.orange.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -476,7 +487,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
             position: Vector2.zero(),
             child: CircleParticle(
               radius: 4,
-              paint: Paint()..color = Colors.blue.withOpacity(0.7),
+              paint: Paint()..color = Colors.blue.withValues(alpha: 0.7),
             ),
           ),
         ),

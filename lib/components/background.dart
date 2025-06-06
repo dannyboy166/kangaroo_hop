@@ -25,20 +25,21 @@ class Background extends Component with HasGameReference<KangarooGame> {
       position: Vector2(game.size.x - 100, 50),
       paint: Paint()..color = const Color(0xFFFFD700),
     );
-    add(sun);
     
-    // Add sun rays
+    // Add sun rays as children of the sun so they rotate together
     for (int i = 0; i < 8; i++) {
       final angle = (i * pi / 4);
       final ray = RectangleComponent(
         size: Vector2(80, 3),
-        position: sun.position + Vector2(30, 30),
+        position: Vector2(30, 30), // Relative to sun center
         anchor: Anchor.centerLeft,
         angle: angle,
-        paint: Paint()..color = const Color(0xFFFFD700).withOpacity(0.5),
+        paint: Paint()..color = const Color(0xFFFFD700).withValues(alpha: 0.5),
       );
-      add(ray);
+      sun.add(ray); // Add rays as children of sun
     }
+    
+    add(sun);
     
     // Create parallax mountain layers
     mountains = [];
@@ -49,7 +50,7 @@ class Background extends Component with HasGameReference<KangarooGame> {
         Mountain(
           position: Vector2(i * 600.0, 200),
           size: Vector2(600, 250),
-          color: const Color(0xFF9370DB).withOpacity(0.5),
+          color: const Color(0xFF9370DB).withValues(alpha: 0.5),
           speed: 0.1,
         ),
       );
@@ -62,7 +63,7 @@ class Background extends Component with HasGameReference<KangarooGame> {
         Mountain(
           position: Vector2(i * 500.0, 250),
           size: Vector2(500, 200),
-          color: const Color(0xFF8B7D6B).withOpacity(0.7),
+          color: const Color(0xFF8B7D6B).withValues(alpha: 0.7),
           speed: 0.3,
         ),
       );
@@ -148,9 +149,9 @@ class Mountain extends PositionComponent {
   void updatePosition(double dt, double gameSpeed) {
     position.x -= gameSpeed * speed * dt;
     
-    // Wrap around when off screen
+    // Wrap around when off screen - spawn before entering from right
     if (position.x + size.x < 0) {
-      position.x += size.x * 3;
+      position.x = 1600; // Spawn off-screen to the right
     }
   }
 }
@@ -184,13 +185,13 @@ class Tree extends PositionComponent {
     add(CircleComponent(
       radius: 20,
       position: Vector2(25, 50),
-      paint: Paint()..color = const Color(0xFF228B22).withOpacity(0.9),
+      paint: Paint()..color = const Color(0xFF228B22).withValues(alpha: 0.9),
     ));
     
     add(CircleComponent(
       radius: 20,
       position: Vector2(55, 50),
-      paint: Paint()..color = const Color(0xFF228B22).withOpacity(0.9),
+      paint: Paint()..color = const Color(0xFF228B22).withValues(alpha: 0.9),
     ));
   }
   

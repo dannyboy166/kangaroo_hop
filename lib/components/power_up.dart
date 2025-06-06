@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
@@ -6,7 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
-enum PowerUpType { doubleJump, shield, magnet, speed }
+enum PowerUpType { doubleJump, shield, magnet }
 
 class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, HasPaint {
   double gameSpeed = 250.0;
@@ -29,9 +31,6 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
         break;
       case PowerUpType.magnet:
         _createMagnet();
-        break;
-      case PowerUpType.speed:
-        _createSpeed();
         break;
     }
     
@@ -64,13 +63,17 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
   }
   
   void _createDoubleJump() {
-    // Background circle
+    // Enhanced background with glow effect
     add(CircleComponent(
-      radius: 20,
-      paint: Paint()..color = Colors.purple.withOpacity(0.8),
+      radius: 22,
+      paint: Paint()..color = Colors.purple.withValues(alpha: 0.3),
+    ));
+    add(CircleComponent(
+      radius: 18,
+      paint: Paint()..color = Colors.purple.withValues(alpha: 0.7),
     ));
     
-    // Jump arrows
+    // Enhanced jump arrows with better visibility
     add(TextComponent(
       text: '⬆⬆',
       position: Vector2(20, 20),
@@ -78,11 +81,31 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 20,
+          fontSize: 24,
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.purple,
+              offset: Offset(0, 0),
+              blurRadius: 8,
+            ),
+          ],
         ),
       ),
     ));
+    
+    // Add sparkle effects around the power-up
+    for (int i = 0; i < 6; i++) {
+      final angle = (i * pi / 3);
+      add(CircleComponent(
+        radius: 3,
+        position: Vector2(
+          20 + cos(angle) * 25,
+          20 + sin(angle) * 25,
+        ),
+        paint: Paint()..color = Colors.white.withValues(alpha: 0.8),
+      ));
+    }
   }
   
   void _createShield() {
@@ -110,60 +133,80 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
   }
   
   void _createMagnet() {
-    // Magnet shape (horseshoe)
+    // Enhanced background glow
+    add(CircleComponent(
+      radius: 22,
+      paint: Paint()..color = Colors.red.withValues(alpha: 0.3),
+    ));
+    
+    // Magnet shape (horseshoe) with better colors
     add(RectangleComponent(
-      size: Vector2(10, 20),
-      position: Vector2(10, 10),
-      paint: Paint()..color = Colors.red,
+      size: Vector2(12, 22),
+      position: Vector2(8, 9),
+      paint: Paint()..color = Colors.red.shade700,
     ));
     
     add(RectangleComponent(
-      size: Vector2(10, 20),
-      position: Vector2(20, 10),
-      paint: Paint()..color = Colors.blue,
+      size: Vector2(12, 22),
+      position: Vector2(20, 9),
+      paint: Paint()..color = Colors.blue.shade700,
     ));
     
     add(RectangleComponent(
-      size: Vector2(20, 8),
-      position: Vector2(10, 10),
-      paint: Paint()..color = Colors.grey,
+      size: Vector2(24, 10),
+      position: Vector2(8, 9),
+      paint: Paint()..color = Colors.grey.shade600,
     ));
     
-    // Magnetic field lines
-    for (int i = 0; i < 3; i++) {
-      add(CircleComponent(
-        radius: 15 + i * 5,
+    // Enhanced magnetic field lines with pulsing effect
+    for (int i = 0; i < 4; i++) {
+      final fieldLine = CircleComponent(
+        radius: 12 + i * 4,
         position: Vector2(20, 20),
         paint: Paint()
-          ..color = Colors.white.withOpacity(0.3 - i * 0.1)
+          ..color = Colors.cyan.withValues(alpha: 0.6 - i * 0.12)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
-      ));
+          ..strokeWidth = 3,
+      );
+      add(fieldLine);
+      
+      // Add pulsing animation to field lines
+      fieldLine.add(
+        ScaleEffect.to(
+          Vector2.all(1.2),
+          EffectController(
+            duration: 1.0 + i * 0.2,
+            reverseDuration: 1.0 + i * 0.2,
+            infinite: true,
+          ),
+        ),
+      );
     }
+    
+    // Add attraction symbols
+    add(TextComponent(
+      text: '🪙',
+      position: Vector2(12, 32),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 12,
+        ),
+      ),
+    ));
+    
+    add(TextComponent(
+      text: '🪙',
+      position: Vector2(28, 32),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 12,
+        ),
+      ),
+    ));
   }
   
-  void _createSpeed() {
-    // Lightning bolt background
-    add(CircleComponent(
-      radius: 20,
-      paint: Paint()..color = Colors.yellow.withOpacity(0.8),
-    ));
-    
-    // Lightning bolt
-    final vertices = [
-      Vector2(15, 10),
-      Vector2(20, 18),
-      Vector2(18, 18),
-      Vector2(25, 30),
-      Vector2(20, 22),
-      Vector2(22, 22),
-    ];
-    
-    add(PolygonComponent(
-      vertices,
-      paint: Paint()..color = Colors.orange,
-    ));
-  }
   
   @override
   void update(double dt) {
@@ -206,7 +249,6 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
       PowerUpType.doubleJump: Colors.purple,
       PowerUpType.shield: Colors.blue,
       PowerUpType.magnet: Colors.red,
-      PowerUpType.speed: Colors.yellow,
     };
     
     game.add(
@@ -223,7 +265,7 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
             position: Vector2.zero(),
             child: CircleParticle(
               radius: 4,
-              paint: Paint()..color = particleColors[type]!.withOpacity(0.8),
+              paint: Paint()..color = particleColors[type]!.withValues(alpha: 0.8),
             ),
           ),
         ),

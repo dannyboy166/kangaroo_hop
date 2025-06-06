@@ -376,7 +376,6 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       PowerUpType.doubleJump: 'Double Jump! 🦘',
       PowerUpType.shield: 'Shield Active! 🛡️',
       PowerUpType.magnet: 'Coin Magnet! 🧲',
-      PowerUpType.speed: 'Speed Boost! ⚡',
     };
     
     powerUpNotification.text = notifications[type]!;
