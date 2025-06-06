@@ -402,90 +402,50 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
   void activateMagnetIndicator() {
     if (magnetIndicator != null) return;
     
-    magnetIndicator = PositionComponent();
+    magnetIndicator = PositionComponent(position: Vector2(30, 75));
     
-    // Create swirling energy sparkles for magnet effect
-    for (int i = 0; i < 12; i++) {
-      final angle = (i * pi / 6);
-      final baseRadius = 35.0 + (i % 3) * 8;
-      final sparkle = CircleComponent(
-        radius: 3 + (i % 2),
-        position: Vector2(
-          30 + cos(angle) * baseRadius,
-          40 + sin(angle) * baseRadius,
-        ),
-        paint: Paint()..color = Colors.cyan.withValues(alpha: 0.8),
-      );
-      
-      magnetIndicator!.add(sparkle);
-      
-      // Add swirling motion
-      sparkle.add(
-        RotateEffect.by(
-          2 * pi,
-          EffectController(
-            duration: 2.0 + (i * 0.1),
-            infinite: true,
-          ),
-        ),
-      );
-      
-      // Add pulsing glow
-      sparkle.add(
-        ScaleEffect.to(
-          Vector2.all(1.5),
-          EffectController(
-            duration: 0.8 + (i * 0.05),
-            reverseDuration: 0.8 + (i * 0.05),
-            infinite: true,
-          ),
-        ),
-      );
-      
-      // Add orbital motion around kangaroo
-      final orbit = PositionComponent(position: Vector2(30, 40));
-      orbit.add(sparkle);
-      magnetIndicator!.add(orbit);
-      
-      orbit.add(
-        RotateEffect.by(
-          2 * pi,
-          EffectController(
-            duration: 3.0,
-            infinite: true,
-          ),
-        ),
-      );
+    // Magnetic field effect
+    for (int i = 0; i < 3; i++) {
+      magnetIndicator!.add(CircleComponent(
+        radius: 8 + i * 4,
+        paint: Paint()
+          ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      ));
     }
     
-    // Add some floating energy dots closer to the body
-    for (int i = 0; i < 6; i++) {
-      final angle = (i * pi / 3);
-      final energyDot = CircleComponent(
-        radius: 2,
-        position: Vector2(
-          30 + cos(angle) * 25,
-          40 + sin(angle) * 25,
+    // Magnet symbol
+    magnetIndicator!.add(TextComponent(
+      text: '🧲',
+      position: Vector2(0, 0),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          fontSize: 14,
+          shadows: [
+            Shadow(
+              color: Colors.cyan,
+              offset: Offset(0, 0),
+              blurRadius: 4,
+            ),
+          ],
         ),
-        paint: Paint()..color = Colors.yellow.withValues(alpha: 0.9),
-      );
-      
-      magnetIndicator!.add(energyDot);
-      
-      // Add gentle floating animation
-      energyDot.add(
-        MoveEffect.by(
-          Vector2(cos(angle + pi/2) * 5, sin(angle + pi/2) * 5),
-          EffectController(
-            duration: 1.2 + (i * 0.1),
-            reverseDuration: 1.2 + (i * 0.1),
-            infinite: true,
-          ),
-        ),
-      );
-    }
+      ),
+    ));
     
     add(magnetIndicator!);
+    
+    // Add rotating magnetic field animation
+    magnetIndicator!.add(
+      RotateEffect.by(
+        2 * pi,
+        EffectController(
+          duration: 2,
+          infinite: true,
+        ),
+      ),
+    );
   }
   
   void removeMagnetIndicator() {

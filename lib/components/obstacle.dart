@@ -2,14 +2,13 @@ import 'dart:math';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
 enum ObstacleType { rock, cactus, log, bird }
 
-class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
+class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
   double gameSpeed = 250.0;
   static const double groundY = 400.0;
   final ObstacleType type;
@@ -61,7 +60,7 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
   }
   
   void _createRock() {
-    // Main rock body
+    // Main rock body vertices
     final vertices = [
       Vector2(10, size.y),
       Vector2(0, size.y * 0.6),
@@ -73,9 +72,24 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
       Vector2(size.x - 5, size.y),
     ];
     
+    // Shadow layer (bottom-right)
+    final shadowVertices = vertices.map((v) => v + Vector2(3, 3)).toList();
+    add(PolygonComponent(
+      shadowVertices,
+      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
+    ));
+    
+    // Main rock body
     add(PolygonComponent(
       vertices,
       paint: Paint()..color = const Color(0xFF696969),
+    ));
+    
+    // Highlight layer (top-left)
+    final highlightVertices = vertices.map((v) => v + Vector2(-1, -1)).toList();
+    add(PolygonComponent(
+      highlightVertices,
+      paint: Paint()..color = const Color(0xFF909090).withValues(alpha: 0.7),
     ));
     
     // Add some texture
@@ -93,24 +107,38 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
   }
   
   void _createCactus() {
+    // Shadow for main trunk
+    add(RectangleComponent(
+      size: Vector2(20, 60),
+      position: Vector2(13, 23),
+      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
+    ));
+    
     // Main trunk
     add(RectangleComponent(
       size: Vector2(20, 60),
       position: Vector2(10, 20),
-      paint: Paint()..color = const Color(0xFF2E8B57),
+      paint: Paint()..color = const Color(0xFF1F5F3F),
+    ));
+    
+    // Highlight for main trunk
+    add(RectangleComponent(
+      size: Vector2(20, 60),
+      position: Vector2(9, 19),
+      paint: Paint()..color = const Color(0xFF2E8B57).withValues(alpha: 0.6),
     ));
     
     // Arms
     add(RectangleComponent(
       size: Vector2(15, 30),
       position: Vector2(-5, 30),
-      paint: Paint()..color = const Color(0xFF3CB371),
+      paint: Paint()..color = const Color(0xFF228B22),
     ));
     
     add(RectangleComponent(
       size: Vector2(15, 25),
       position: Vector2(25, 35),
-      paint: Paint()..color = const Color(0xFF3CB371),
+      paint: Paint()..color = const Color(0xFF228B22),
     ));
     
     // Spikes
@@ -121,7 +149,7 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
           game.random.nextDouble() * 30 + 5,
           game.random.nextDouble() * 50 + 20,
         ),
-        paint: Paint()..color = const Color(0xFF556B2F),
+        paint: Paint()..color = const Color(0xFF3C5030),
         angle: game.random.nextDouble() * pi,
       ));
     }
@@ -135,10 +163,24 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
   }
   
   void _createLog() {
+    // Shadow for log body
+    add(RectangleComponent(
+      size: Vector2(size.x, size.y),
+      position: Vector2(3, 3),
+      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
+    ));
+    
     // Main log body
     add(RectangleComponent(
       size: Vector2(size.x, size.y),
       paint: Paint()..color = const Color(0xFF8B4513),
+    ));
+    
+    // Highlight for log body
+    add(RectangleComponent(
+      size: Vector2(size.x, size.y),
+      position: Vector2(-1, -1),
+      paint: Paint()..color = const Color(0xFFCD853F).withValues(alpha: 0.6),
     ));
     
     // Wood rings
@@ -171,11 +213,25 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
   }
   
   void _createBird() {
+    // Shadow for body
+    add(CircleComponent(
+      radius: 15,
+      position: Vector2(33, 23),
+      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
+    ));
+    
     // Body
     add(CircleComponent(
       radius: 15,
       position: Vector2(30, 20),
       paint: Paint()..color = const Color(0xFF8B008B),
+    ));
+    
+    // Highlight for body
+    add(CircleComponent(
+      radius: 15,
+      position: Vector2(29, 19),
+      paint: Paint()..color = const Color(0xFFDA70D6).withValues(alpha: 0.6),
     ));
     
     // Head
@@ -217,20 +273,10 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame> {
     ];
     add(PolygonComponent(
       wingVertices,
-      paint: Paint()..color = const Color(0xFF8B008B).withOpacity(0.8),
+      paint: Paint()..color = const Color(0xFF8B008B).withValues(alpha: 0.8),
     ));
     
-    // Add flapping animation
-    add(
-      MoveEffect.by(
-        Vector2(0, -10),
-        EffectController(
-          duration: 0.5,
-          reverseDuration: 0.5,
-          infinite: true,
-        ),
-      ),
-    );
+    // Note: Bird movement handled in update() method to sync with collision
   }
   
   @override

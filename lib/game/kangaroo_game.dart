@@ -57,6 +57,10 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   
   static const double minObstacleSpacing = 1.2;
   static const double maxObstacleSpacing = 2.5;
+  static const double minGapSpacing = 0.1; // Minimum gap between close obstacles
+  static const double maxGapSpacing = 3; // Maximum gap between close obstacles
+  
+  bool lastWasGap = false; // Track if last obstacles were a gap
   
   @override
   Color backgroundColor() => const Color(0xFF87CEEB);
@@ -81,6 +85,9 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     await add(ground);
     await add(kangaroo);
     await add(uiOverlay);
+    
+    // Ensure UI is always on top
+    uiOverlay.priority = 1000;
     
     // Start cloud spawning
     startCloudSpawning();
@@ -134,6 +141,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     speedMultiplier = 1.0;
     distanceTraveled = 0.0;
     gameOverTriggered = false;
+    lastWasGap = false;
     
     // Clear all gameplay elements
     removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
@@ -156,6 +164,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     hasDoubleJump = false;
     hasShield = false;
     isMagnetActive = false;
+    lastWasGap = false;
     
     kangaroo.reset();
     uiOverlay.hideMenu();
@@ -293,8 +302,27 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
     
-    // Vary spacing based on game speed
-    final spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+    double spacing;
+    bool willBeGap = false;
+    
+    // After score 1000, introduce gaps (close double obstacles)
+    if (score >= 1000 && !lastWasGap) {
+      // 30% chance to create a gap (close double obstacles)
+      if (random.nextDouble() < 0.3) {
+        willBeGap = true;
+        // Calculate gap spacing that scales with speed (random between min and max)
+        final speedRatio = gameSpeed / 450.0; // 450 is speed at score 1000
+        final baseGapSpacing = minGapSpacing + random.nextDouble() * (maxGapSpacing - minGapSpacing);
+        spacing = baseGapSpacing * speedRatio;
+      } else {
+        // Normal spacing
+        spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+      }
+    } else {
+      // Either score < 1000 or last was a gap, use normal spacing
+      spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+    }
+    
     final adjustedSpacing = spacing / speedMultiplier;
     
     obstacleTimer = TimerComponent(
@@ -305,6 +333,10 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
           final obstacle = Obstacle(type: ObstacleType.values[random.nextInt(ObstacleType.values.length)]);
           obstacle.gameSpeed = gameSpeed;
           add(obstacle);
+          
+          // Update gap tracking
+          lastWasGap = willBeGap;
+          
           scheduleNextObstacle();
         }
       },
