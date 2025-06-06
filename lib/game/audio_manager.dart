@@ -5,16 +5,13 @@ class AudioManager {
   factory AudioManager() => _instance;
   AudioManager._internal();
 
-  bool _soundEnabled = false;
-  bool _musicEnabled = false;
+  bool _soundEnabled = true; // Enable by default
+  bool _musicEnabled = true; // Enable by default
 
   // Simplified throttling - only for frequent sounds
   DateTime _lastJumpSound = DateTime.now();
+  DateTime _lastLandSound = DateTime.now();
   DateTime _lastCoinSound = DateTime.now();
-// Reasonable delay
-
-  // Smart audio reduction counters - only for coins now
-  int _coinSoundCounter = 0;
 
   // Audio volume control based on game speed
   double _getVolumeForSpeed(double gameSpeed) {
@@ -38,36 +35,38 @@ class AudioManager {
     }
   }
 
-  // Play EVERY jump sound - but with shorter delay and lower volume at high speeds
+  // Play jump sound - using your jump.mp3 file
   void playJump() {
     if (!_soundEnabled) return;
 
     // Always play jump sounds, but with minimal delay to prevent audio overlap
-    if (_canPlaySound(_lastJumpSound, minDelay: 30)) {
-      // Shorter delay for jumps
+    if (_canPlaySound(_lastJumpSound, minDelay: 100)) {
       _lastJumpSound = DateTime.now();
-      _playSoundSafely('sfx/jump.mp3', volume: 0.6); // Slightly lower volume
+      _playSoundSafely('sfx/jump.mp3', volume: 0.7);
     }
   }
 
-  // REMOVED: playLand() - not needed!
+  // Play land sound - using your land.mp3 file
+  void playLand() {
+    if (!_soundEnabled) return;
 
+    // Throttle landing sounds to prevent spam
+    if (_canPlaySound(_lastLandSound, minDelay: 150)) {
+      _lastLandSound = DateTime.now();
+      _playSoundSafely('sfx/land.mp3', volume: 0.6);
+    }
+  }
+
+  // Play coin collect sound - using your coin_collect.mp3 file
   void playCoinCollect({double gameSpeed = 250}) {
     if (!_soundEnabled) return;
 
-    _coinSoundCounter++;
-
-    // Aggressive coin sound reduction based on speed
-    int skipRate = 2; // Every 2nd coin by default
-    if (gameSpeed > 350) skipRate = 4; // Every 4th coin
-    if (gameSpeed > 450) skipRate = 6; // Every 6th coin
-    if (gameSpeed > 550) skipRate = 8; // Every 8th coin
-
-    if (_coinSoundCounter % skipRate == 0 &&
-        _canPlaySound(_lastCoinSound, minDelay: 60)) {
+    // Play EVERY coin collect sound, but with throttling to prevent overlap
+    if (_canPlaySound(_lastCoinSound, minDelay: 50)) {
+      // Shorter delay
       _lastCoinSound = DateTime.now();
       final volume = _getVolumeForSpeed(gameSpeed);
-      _playSoundSafely('sfx/coin_collect.mp3', volume: volume * 0.8);
+      _playSoundSafely('sfx/coin_collect.mp3', volume: volume * 0.9);
     }
   }
 
@@ -75,18 +74,28 @@ class AudioManager {
     return DateTime.now().difference(lastPlayed).inMilliseconds > minDelay;
   }
 
-  // REMOVED: playCollision() - using game over sound instead!
-
-  // Power-up sounds (infrequent, so no throttling needed)
-  void playShieldActivate() {
+  // Other game sounds using your available files
+  void playCollision() {
     if (_soundEnabled) {
-      _playSoundSafely('sfx/shield_activate.mp3', volume: 0.8);
+      _playSoundSafely('sfx/collision.mp3', volume: 0.8);
+    }
+  }
+
+  void playGameOver() {
+    if (_soundEnabled) {
+      _playSoundSafely('sfx/game_over.mp3', volume: 1.0);
     }
   }
 
   void playDoubleJump() {
     if (_soundEnabled) {
       _playSoundSafely('sfx/double_jump.mp3', volume: 0.8);
+    }
+  }
+
+  void playShieldActivate() {
+    if (_soundEnabled) {
+      _playSoundSafely('sfx/shield_activate.mp3', volume: 0.8);
     }
   }
 
@@ -102,29 +111,23 @@ class AudioManager {
     }
   }
 
-  // Game over sound - plays when you hit obstacle OR when game ends
-  void playGameOver() {
-    if (_soundEnabled) {
-      _playSoundSafely('sfx/game_over.mp3', volume: 1.0);
-    }
-  }
-
   // Helper method with volume control
   void _playSoundSafely(String path, {double volume = 1.0}) {
     try {
       FlameAudio.play(path, volume: volume);
     } catch (e) {
-      // Silently handle audio errors
+      print('Audio error playing $path: $e');
+      // Silently handle audio errors in production
     }
   }
 
-  // Background Music
+  // Background Music - if you have music files
   void playGameplayMusic() {
     if (_musicEnabled) {
       try {
-        FlameAudio.bgm.play('music/gameplay.mp3', volume: 0.5);
+        FlameAudio.bgm.play('music/gameplay.mp3', volume: 0.4);
       } catch (e) {
-        // Handle music errors
+        print('Music error: $e');
       }
     }
   }
@@ -132,9 +135,9 @@ class AudioManager {
   void playMenuMusic() {
     if (_musicEnabled) {
       try {
-        FlameAudio.bgm.play('music/menu.mp3', volume: 0.5);
+        FlameAudio.bgm.play('music/menu.mp3', volume: 0.4);
       } catch (e) {
-        // Handle music errors
+        print('Music error: $e');
       }
     }
   }
@@ -143,30 +146,34 @@ class AudioManager {
     try {
       FlameAudio.bgm.stop();
     } catch (e) {
-      // Handle stop errors
+      print('Error stopping music: $e');
     }
   }
 
   // Reset counters when game restarts
-  void resetCounters() {
-    _coinSoundCounter = 0;
-  }
+  void resetCounters() {}
 
-  // Minimal audio preloading - only essential sounds
+  // Preload your specific audio files
   Future<void> preloadAudio() async {
     try {
       await FlameAudio.audioCache.loadAll([
+        // Your available sound files
         'sfx/jump.mp3',
+        'sfx/land.mp3',
         'sfx/coin_collect.mp3',
+        'sfx/collision.mp3',
         'sfx/game_over.mp3',
-        'sfx/shield_activate.mp3',
         'sfx/double_jump.mp3',
+        'sfx/shield_activate.mp3',
         'sfx/magnet_activate.mp3',
         'sfx/button_click.mp3',
-        'music/gameplay.mp3',
-        'music/menu.mp3',
+        // Add music if you have it
+        // 'music/gameplay.mp3',
+        // 'music/menu.mp3',
       ]);
+      print('Audio files preloaded successfully');
     } catch (e) {
+      print('Error preloading audio: $e');
       // Continue without audio if files are missing
     }
   }

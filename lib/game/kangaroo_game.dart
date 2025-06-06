@@ -69,10 +69,10 @@ class KangarooGame extends FlameGame
   final List<Coin> _coins = [];
   final List<PowerUp> _powerUps = [];
   final List<Cloud> _clouds = [];
-  
+
   // Performance: Reduce particle effects at high speeds
   bool get shouldReduceEffects => gameSpeed > 500;
-  
+
   @override
   Color backgroundColor() => const Color(0xFF87CEEB);
 
@@ -112,17 +112,23 @@ class KangarooGame extends FlameGame
   @override
   void onChildrenChanged(Component child, ChildrenChangeType type) {
     super.onChildrenChanged(child, type);
-    
+
     // Performance: Maintain cached lists
     if (type == ChildrenChangeType.added) {
-      if (child is Obstacle) _obstacles.add(child);
-      else if (child is Coin) _coins.add(child);
-      else if (child is PowerUp) _powerUps.add(child);
+      if (child is Obstacle)
+        _obstacles.add(child);
+      else if (child is Coin)
+        _coins.add(child);
+      else if (child is PowerUp)
+        _powerUps.add(child);
       else if (child is Cloud) _clouds.add(child);
     } else if (type == ChildrenChangeType.removed) {
-      if (child is Obstacle) _obstacles.remove(child);
-      else if (child is Coin) _coins.remove(child);
-      else if (child is PowerUp) _powerUps.remove(child);
+      if (child is Obstacle)
+        _obstacles.remove(child);
+      else if (child is Coin)
+        _coins.remove(child);
+      else if (child is PowerUp)
+        _powerUps.remove(child);
       else if (child is Cloud) _clouds.remove(child);
     }
   }
@@ -440,16 +446,17 @@ class KangarooGame extends FlameGame
           // Spawn single valuable coins instead of patterns
           final startX = size.x + 50;
           final coinY = 250 + random.nextDouble() * 120;
-          
+
           // Just spawn 1-2 coins at a time
           add(Coin()
             ..position = Vector2(startX, coinY)
             ..gameSpeed = gameSpeed);
-          
+
           // 30% chance for a second coin nearby
           if (random.nextDouble() < 0.3) {
             add(Coin()
-              ..position = Vector2(startX + 60, coinY + random.nextDouble() * 40 - 20)
+              ..position =
+                  Vector2(startX + 60, coinY + random.nextDouble() * 40 - 20)
               ..gameSpeed = gameSpeed);
           }
         }
@@ -478,6 +485,9 @@ class KangarooGame extends FlameGame
   void collectCoin() {
     coins += 5; // Each coin is now worth 5!
     uiOverlay.updateCoins(coins);
+
+    // Play coin collect sound with current game speed for smart throttling
+    AudioManager().playCoinCollect(gameSpeed: gameSpeed);
 
     // Performance: Skip particles if reducing effects
     if (shouldReduceEffects) return;
@@ -544,9 +554,13 @@ class KangarooGame extends FlameGame
       if (hasShield) {
         hasShield = false;
         kangaroo.deactivateShield();
+        // Play collision sound for shield break
+        AudioManager().playCollision();
         // Add shield break effect
         addShieldBreakParticles();
       } else {
+        // Play collision sound before game over
+        AudioManager().playCollision();
         gameOver();
       }
     }

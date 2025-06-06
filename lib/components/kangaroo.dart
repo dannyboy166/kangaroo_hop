@@ -47,6 +47,7 @@ class Kangaroo extends PositionComponent
   // Performance: Track animation state
   double _animationTime = 0;
   bool _hasActiveScaleEffect = false;
+  bool hasPlayedLandingSound = false;
 
   @override
   Future<void> onLoad() async {
@@ -186,7 +187,18 @@ class Kangaroo extends PositionComponent
       rotation = (verticalSpeed / jumpSpeed) * 0.2;
       angle = rotation;
 
-      // Check if landed
+      // Check if about to land (play sound earlier)
+      final distanceToGround = groundY - size.y - position.y;
+
+      // Play landing sound when close to ground (about 30 pixels away)
+      if (distanceToGround <= 30 &&
+          verticalSpeed > 0 &&
+          !hasPlayedLandingSound) {
+        AudioManager().playLand();
+        hasPlayedLandingSound = true;
+      }
+
+      // Check if actually landed
       if (position.y >= groundY - size.y) {
         land();
       }
@@ -240,6 +252,7 @@ class Kangaroo extends PositionComponent
     verticalSpeed = speed;
     isOnGround = false;
     isJumping = true;
+    hasPlayedLandingSound = false; // Reset the landing sound flag
 
     AudioManager().playJump();
 
@@ -278,6 +291,9 @@ class Kangaroo extends PositionComponent
     isOnGround = true;
     isJumping = false;
     jumpCount = 0;
+
+    // Don't play landing sound here anymore - it's played earlier in update()
+    // AudioManager().playLand(); // REMOVED
 
     // Landing particles
     addLandingParticles();
@@ -319,6 +335,7 @@ class Kangaroo extends PositionComponent
     visualContainer.scale = Vector2.all(1);
     _animationTime = 0;
     _hasActiveScaleEffect = false;
+    hasPlayedLandingSound = false; // Reset landing sound flag
 
     if (isShielded) {
       deactivateShield();
