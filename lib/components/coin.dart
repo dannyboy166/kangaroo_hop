@@ -13,44 +13,72 @@ class Coin extends PositionComponent with HasGameReference<KangarooGame>, HasPai
   Future<void> onLoad() async {
     await super.onLoad();
     
-    size = Vector2(30, 30);
+    // Slightly larger size for more valuable coins
+    size = Vector2(40, 40);
+    
+    // Outer glow effect
+    add(CircleComponent(
+      radius: 22,
+      paint: Paint()..color = const Color(0xFFFFD700).withValues(alpha: 0.3),
+    ));
     
     // Outer circle
     add(CircleComponent(
-      radius: 15,
+      radius: 20,
       paint: Paint()..color = const Color(0xFFFFD700),
     ));
     
     // Inner circle
     add(CircleComponent(
-      radius: 12,
-      position: Vector2(3, 3),
+      radius: 16,
+      position: Vector2(4, 4),
       paint: Paint()..color = const Color(0xFFFFA500),
     ));
     
-    // Dollar sign
+    // Dollar sign (bigger)
     add(TextComponent(
       text: '\$',
-      position: Vector2(15, 15),
+      position: Vector2(20, 20),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Color(0xFF8B4513),
-          fontSize: 18,
+          fontSize: 24,
           fontWeight: FontWeight.bold,
         ),
       ),
     ));
     
-    // Add collision detection
-    add(CircleHitbox(radius: 15));
+    // Number 5 to show value
+    add(TextComponent(
+      text: '5',
+      position: Vector2(20, 35),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Color(0xFFFFFFFF),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(1, 1),
+              blurRadius: 2,
+            ),
+          ],
+        ),
+      ),
+    ));
     
-    // Add rotation animation
+    // Add collision detection
+    add(CircleHitbox(radius: 20));
+    
+    // Add rotation animation (slower for less CPU usage)
     add(
       RotateEffect.by(
         2 * 3.14159,
         EffectController(
-          duration: 2,
+          duration: 3, // Slower rotation
           infinite: true,
         ),
       ),
@@ -59,10 +87,10 @@ class Coin extends PositionComponent with HasGameReference<KangarooGame>, HasPai
     // Add floating animation
     add(
       MoveEffect.by(
-        Vector2(0, -5),
+        Vector2(0, -8),
         EffectController(
-          duration: 1,
-          reverseDuration: 1,
+          duration: 1.5,
+          reverseDuration: 1.5,
           infinite: true,
         ),
       ),

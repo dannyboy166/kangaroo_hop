@@ -42,8 +42,11 @@ class Kangaroo extends PositionComponent
   CircleComponent? shieldVisual;
   PositionComponent? doubleJumpIndicator;
   PositionComponent? magnetIndicator;
-  late TimerComponent jumpParticleTimer;
   double rotation = 0;
+
+  // Performance: Track animation state
+  double _animationTime = 0;
+  bool _hasActiveScaleEffect = false;
 
   @override
   Future<void> onLoad() async {
@@ -191,31 +194,26 @@ class Kangaroo extends PositionComponent
       angle = 0;
     }
 
-    // Animate legs while running (reduce frequency at high speeds for performance)
+    // Animate legs while running (optimized)
     if (isOnGround && game.gameState == GameState.playing) {
-      final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
+      _animationTime += dt;
 
-      // Reduce animation frequency at high speeds to improve performance
-      final animationMultiplier = game.gameSpeed > 500 ? 0.7 : 1.0;
+      // Performance: Reduce animation calculations at high speeds
+      final animSpeed = game.gameSpeed > 500 ? 0.7 : 1.0;
+      final time = _animationTime * animSpeed;
 
-      legFront.angle = sin(time * 10 * animationMultiplier) * 0.3;
-      legBack.angle = -sin(time * 10 * animationMultiplier) * 0.3;
-      armFront.angle = 0.3 + sin(time * 8 * animationMultiplier) * 0.2;
-      armBack.angle = -0.3 - sin(time * 8 * animationMultiplier) * 0.2;
+      // Use cached sin values
+      final sin10 = sin(time * 10);
+      final sin8 = sin(time * 8);
+      final sin12 = sin(time * 12);
+
+      legFront.angle = sin10 * 0.3;
+      legBack.angle = -sin10 * 0.3;
+      armFront.angle = 0.3 + sin8 * 0.2;
+      armBack.angle = -0.3 - sin8 * 0.2;
 
       // Bob up and down slightly (reduced at high speeds)
-      body.position.y = 20 + sin(time * 12 * animationMultiplier) * 2;
-    }
-
-    // Magnet effect - attract nearby coins
-    if (game.isMagnetActive) {
-      game.children.whereType<Coin>().forEach((coin) {
-        final distance = coin.position.distanceTo(position);
-        if (distance < 200) {
-          final direction = (position - coin.position).normalized();
-          coin.position += direction * 300 * dt;
-        }
-      });
+      body.position.y = 20 + sin12 * 2;
     }
   }
 
@@ -243,19 +241,19 @@ class Kangaroo extends PositionComponent
     isOnGround = false;
     isJumping = true;
 
-// Always play regular jump sound for both jumps and double jumps
-    AudioManager().playJump(); // Same sound for ALL jumps
+    AudioManager().playJump();
 
     // Add jump particles
     addJumpParticles();
 
-    // Immediately reset scale and clear all effects to prevent interference
-    visualContainer.scale = Vector2.all(1.0);
-    visualContainer.removeWhere((component) => component is ScaleEffect);
+    // Performance: Skip scale effect if one is active
+    if (!_hasActiveScaleEffect) {
+      _hasActiveScaleEffect = true;
 
-    // Add a small delay to ensure clean state before animation
-    Future.delayed(Duration.zero, () {
-      // Squash and stretch effect on visual container only
+      // Reset scale first
+      visualContainer.scale = Vector2.all(1.0);
+
+      // Squash and stretch effect
       visualContainer.add(
         ScaleEffect.to(
           Vector2(1.2, 0.8),
@@ -265,12 +263,13 @@ class Kangaroo extends PositionComponent
               ScaleEffect.to(
                 Vector2(1.0, 1.0),
                 EffectController(duration: 0.2),
+                onComplete: () => _hasActiveScaleEffect = false,
               ),
             );
           },
         ),
       );
-    });
+    }
   }
 
   void land() {
@@ -280,36 +279,32 @@ class Kangaroo extends PositionComponent
     isJumping = false;
     jumpCount = 0;
 
-    // REMOVED: AudioManager().playLand(); - No landing sound needed!
-
     // Landing particles
     addLandingParticles();
 
-    // Only apply landing squash if not immediately jumping again
-    // Reset scale and clear all effects first
-    visualContainer.scale = Vector2.all(1.0);
-    visualContainer.removeWhere((component) => component is ScaleEffect);
+    if (!_hasActiveScaleEffect) {
+      _hasActiveScaleEffect = true;
 
-    // Add a small delay to check if we're still on ground (not jumping again)
-    Future.delayed(const Duration(milliseconds: 16), () {
-      if (isOnGround && !isJumping) {
-        // Squash effect on landing - visual container only
-        visualContainer.add(
-          ScaleEffect.to(
-            Vector2(1.3, 0.7),
-            EffectController(duration: 0.1),
-            onComplete: () {
-              visualContainer.add(
-                ScaleEffect.to(
-                  Vector2(1.0, 1.0),
-                  EffectController(duration: 0.15),
-                ),
-              );
-            },
-          ),
-        );
-      }
-    });
+      // Reset scale first
+      visualContainer.scale = Vector2.all(1.0);
+
+      // Squash effect on landing
+      visualContainer.add(
+        ScaleEffect.to(
+          Vector2(1.3, 0.7),
+          EffectController(duration: 0.1),
+          onComplete: () {
+            visualContainer.add(
+              ScaleEffect.to(
+                Vector2(1.0, 1.0),
+                EffectController(duration: 0.15),
+                onComplete: () => _hasActiveScaleEffect = false,
+              ),
+            );
+          },
+        ),
+      );
+    }
   }
 
   void reset() {
@@ -322,6 +317,8 @@ class Kangaroo extends PositionComponent
     jumpCount = 0;
     angle = 0;
     visualContainer.scale = Vector2.all(1);
+    _animationTime = 0;
+    _hasActiveScaleEffect = false;
 
     if (isShielded) {
       deactivateShield();
@@ -341,7 +338,7 @@ class Kangaroo extends PositionComponent
       position: Vector2(30, 40), // Center around kangaroo
       anchor: Anchor.center,
       paint: Paint()
-        ..color = Colors.blue.withValues(alpha: 0.6)
+        ..color = Colors.blue.withValues(alpha: 0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0,
     );
@@ -372,9 +369,12 @@ class Kangaroo extends PositionComponent
 
     doubleJumpIndicator = PositionComponent();
 
+    // Performance: Reduce sparkle count
+    final sparkleCount = game.shouldReduceEffects ? 4 : 8;
+
     // Create sparkles around the kangaroo for double jump
-    for (int i = 0; i < 8; i++) {
-      final angle = (i * pi / 4);
+    for (int i = 0; i < sparkleCount; i++) {
+      final angle = (i * pi / (sparkleCount / 2));
       final radius = 45.0;
       final sparkle = CircleComponent(
         radius: 4,
@@ -382,34 +382,37 @@ class Kangaroo extends PositionComponent
           30 + cos(angle) * radius,
           40 + sin(angle) * radius,
         ),
-        paint: Paint()..color = Colors.purple.withValues(alpha: 0.9),
+        paint: Paint()..color = Colors.purple.withValues(alpha: 0.7),
       );
 
       doubleJumpIndicator!.add(sparkle);
 
-      // Add twinkling animation to each sparkle
-      sparkle.add(
-        OpacityEffect.to(
-          0.3,
-          EffectController(
-            duration: 0.5 + (i * 0.1),
-            reverseDuration: 0.5 + (i * 0.1),
-            infinite: true,
+      // Performance: Simpler animation at high speeds
+      if (!game.shouldReduceEffects) {
+        // Add twinkling animation to each sparkle
+        sparkle.add(
+          OpacityEffect.to(
+            0.3,
+            EffectController(
+              duration: 0.5 + (i * 0.1),
+              reverseDuration: 0.5 + (i * 0.1),
+              infinite: true,
+            ),
           ),
-        ),
-      );
+        );
 
-      // Add floating motion
-      sparkle.add(
-        MoveEffect.by(
-          Vector2(sin(angle) * 8, cos(angle) * 8),
-          EffectController(
-            duration: 1.5 + (i * 0.2),
-            reverseDuration: 1.5 + (i * 0.2),
-            infinite: true,
+        // Add floating motion
+        sparkle.add(
+          MoveEffect.by(
+            Vector2(sin(angle) * 8, cos(angle) * 8),
+            EffectController(
+              duration: 1.5 + (i * 0.2),
+              reverseDuration: 1.5 + (i * 0.2),
+              infinite: true,
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
 
     add(doubleJumpIndicator!);
@@ -425,48 +428,61 @@ class Kangaroo extends PositionComponent
 
     magnetIndicator = PositionComponent(position: Vector2(30, 75));
 
-    // Magnetic field effect
-    for (int i = 0; i < 3; i++) {
-      magnetIndicator!.add(CircleComponent(
-        radius: 8 + i * 4,
-        paint: Paint()
-          ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2,
+    // Performance: Simpler magnet effect at high speeds
+    if (game.shouldReduceEffects) {
+      // Just show magnet symbol
+      magnetIndicator!.add(TextComponent(
+        text: '🧲',
+        position: Vector2(0, 0),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(fontSize: 14),
+        ),
       ));
+    } else {
+      // Magnetic field effect
+      for (int i = 0; i < 3; i++) {
+        magnetIndicator!.add(CircleComponent(
+          radius: 8 + i * 4,
+          paint: Paint()
+            ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2,
+        ));
+      }
+
+      // Magnet symbol
+      magnetIndicator!.add(TextComponent(
+        text: '🧲',
+        position: Vector2(0, 0),
+        anchor: Anchor.center,
+        textRenderer: TextPaint(
+          style: const TextStyle(
+            fontSize: 14,
+            shadows: [
+              Shadow(
+                color: Colors.cyan,
+                offset: Offset(0, 0),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+        ),
+      ));
+
+      // Add rotating magnetic field animation
+      magnetIndicator!.add(
+        RotateEffect.by(
+          2 * pi,
+          EffectController(
+            duration: 2,
+            infinite: true,
+          ),
+        ),
+      );
     }
 
-    // Magnet symbol
-    magnetIndicator!.add(TextComponent(
-      text: '🧲',
-      position: Vector2(0, 0),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontSize: 14,
-          shadows: [
-            Shadow(
-              color: Colors.cyan,
-              offset: Offset(0, 0),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
-    ));
-
     add(magnetIndicator!);
-
-    // Add rotating magnetic field animation
-    magnetIndicator!.add(
-      RotateEffect.by(
-        2 * pi,
-        EffectController(
-          duration: 2,
-          infinite: true,
-        ),
-      ),
-    );
   }
 
   void removeMagnetIndicator() {
@@ -475,8 +491,11 @@ class Kangaroo extends PositionComponent
   }
 
   void addJumpParticles() {
+    // Performance: Skip particles at very high speeds
+    if (game.gameSpeed > 600) return;
+
     // Reduce particles at high speeds for better performance
-    final particleCount = game.gameSpeed > 500 ? 5 : 10;
+    final particleCount = game.shouldReduceEffects ? 3 : 8;
 
     game.add(
       ParticleSystemComponent(
@@ -501,11 +520,14 @@ class Kangaroo extends PositionComponent
   }
 
   void addDoubleJumpParticles() {
+    // Performance: Reduce particles at high speeds
+    final particleCount = game.shouldReduceEffects ? 10 : 20;
+
     game.add(
       ParticleSystemComponent(
         position: position + Vector2(size.x / 2, size.y / 2),
         particle: Particle.generate(
-          count: 20,
+          count: particleCount,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 50),
             speed: Vector2(
@@ -524,8 +546,11 @@ class Kangaroo extends PositionComponent
   }
 
   void addLandingParticles() {
+    // Performance: Skip particles at very high speeds
+    if (game.gameSpeed > 600) return;
+
     // Reduce particles at high speeds for better performance
-    final particleCount = game.gameSpeed > 500 ? 7 : 15;
+    final particleCount = game.shouldReduceEffects ? 5 : 12;
 
     game.add(
       ParticleSystemComponent(
@@ -555,11 +580,9 @@ class Kangaroo extends PositionComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is Obstacle) {
-      // REMOVED: AudioManager().playCollision(); - Game over sound plays instead!
       game.onObstacleCollision();
       return true;
     } else if (other is Coin) {
-      // AudioManager().playCoinCollect(gameSpeed: game.gameSpeed);
       other.collect();
       game.collectCoin();
       return true;

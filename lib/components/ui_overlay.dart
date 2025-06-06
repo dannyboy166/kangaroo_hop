@@ -18,6 +18,85 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   late TextComponent restartText;
   late TextComponent powerUpNotification;
   
+  // Performance: Cache text renderers
+  static final _scoreRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 28,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
+  static final _highScoreRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.white70,
+      fontSize: 20,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
+  static final _coinRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.yellow,
+      fontSize: 28,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
+  static final _menuTitleRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.orange,
+      fontSize: 64,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          color: Colors.black,
+          offset: Offset(4, 4),
+          blurRadius: 8,
+        ),
+      ],
+    ),
+  );
+  
+  static final _menuSubtitleRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 32,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
+  static final _gameOverTitleRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.red,
+      fontSize: 56,
+      fontWeight: FontWeight.bold,
+      shadows: [
+        Shadow(
+          color: Colors.black,
+          offset: Offset(3, 3),
+          blurRadius: 6,
+        ),
+      ],
+    ),
+  );
+  
+  static final _gameOverScoreRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 32,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
+  static final _powerUpRenderer = TextPaint(
+    style: const TextStyle(
+      color: Colors.white,
+      fontSize: 36,
+      fontWeight: FontWeight.bold,
+    ),
+  );
+  
   @override
   Future<void> onLoad() async {
     await super.onLoad();
@@ -26,60 +105,21 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
     scoreText = TextComponent(
       text: 'Score: 0',
       position: Vector2(20, 20),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black87,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _scoreRenderer,
     );
     
     // High score display
     highScoreText = TextComponent(
       text: 'Best: ${game.highScore}',
       position: Vector2(20, 55),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white70,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black87,
-              offset: Offset(1, 1),
-              blurRadius: 3,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _highScoreRenderer,
     );
     
     // Coin display
     coinText = TextComponent(
       text: '🪙 0',
       position: Vector2(game.size.x - 120, 20),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.yellow,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black87,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _coinRenderer,
     );
     
     // Menu title
@@ -87,25 +127,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       text: 'KANGAROO HOP',
       position: game.size / 2 - Vector2(0, 50),
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.orange,
-          fontSize: 64,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(4, 4),
-              blurRadius: 8,
-            ),
-            Shadow(
-              color: Colors.deepOrange,
-              offset: Offset(-2, -2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _menuTitleRenderer,
     );
     
     // Menu subtitle
@@ -113,60 +135,21 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       text: 'Tap to Start!',
       position: game.size / 2 + Vector2(0, 30),
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _menuSubtitleRenderer,
     );
     
     // Game over title
     gameOverTitle = TextComponent(
       text: 'GAME OVER',
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.red,
-          fontSize: 56,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(3, 3),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _gameOverTitleRenderer,
     );
     
     // Game over score
     gameOverScore = TextComponent(
       text: '',
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _gameOverScoreRenderer,
     );
     
     // Game over high score
@@ -178,13 +161,6 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
           color: Colors.yellow,
           fontSize: 28,
           fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
         ),
       ),
     );
@@ -197,13 +173,6 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         style: const TextStyle(
           color: Colors.yellow,
           fontSize: 24,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
         ),
       ),
     );
@@ -217,13 +186,6 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
           color: Colors.white,
           fontSize: 28,
           fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
         ),
       ),
     );
@@ -233,20 +195,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       text: '',
       position: game.size / 2 - Vector2(0, 100),
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 36,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
+      textRenderer: _powerUpRenderer,
     );
   }
   
@@ -296,6 +245,9 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   
   void updateCoins(int coins) {
     coinText.text = '🪙 $coins';
+    
+    // Performance: Skip pulse animation at high speeds
+    if (game.shouldReduceEffects) return;
     
     // Pulse animation
     coinText.add(

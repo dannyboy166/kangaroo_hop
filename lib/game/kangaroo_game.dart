@@ -59,12 +59,20 @@ class KangarooGame extends FlameGame
 
   static const double minObstacleSpacing = 1.2;
   static const double maxObstacleSpacing = 2.5;
-  static const double minGapSpacing =
-      0.1; // Minimum gap between close obstacles
-  static const double maxGapSpacing = 3; // Maximum gap between close obstacles
+  static const double minGapSpacing = 0.1;
+  static const double maxGapSpacing = 3;
 
-  bool lastWasGap = false; // Track if last obstacles were a gap
+  bool lastWasGap = false;
 
+  // Performance optimization: Cache moving components
+  final List<Obstacle> _obstacles = [];
+  final List<Coin> _coins = [];
+  final List<PowerUp> _powerUps = [];
+  final List<Cloud> _clouds = [];
+  
+  // Performance: Reduce particle effects at high speeds
+  bool get shouldReduceEffects => gameSpeed > 500;
+  
   @override
   Color backgroundColor() => const Color(0xFF87CEEB);
 
@@ -99,6 +107,24 @@ class KangarooGame extends FlameGame
     startCloudSpawning();
 
     showMenu();
+  }
+
+  @override
+  void onChildrenChanged(Component child, ChildrenChangeType type) {
+    super.onChildrenChanged(child, type);
+    
+    // Performance: Maintain cached lists
+    if (type == ChildrenChangeType.added) {
+      if (child is Obstacle) _obstacles.add(child);
+      else if (child is Coin) _coins.add(child);
+      else if (child is PowerUp) _powerUps.add(child);
+      else if (child is Cloud) _clouds.add(child);
+    } else if (type == ChildrenChangeType.removed) {
+      if (child is Obstacle) _obstacles.remove(child);
+      else if (child is Coin) _coins.remove(child);
+      else if (child is PowerUp) _powerUps.remove(child);
+      else if (child is Cloud) _clouds.remove(child);
+    }
   }
 
   @override
@@ -151,6 +177,11 @@ class KangarooGame extends FlameGame
     distanceTraveled = 0.0;
     gameOverTriggered = false;
     lastWasGap = false;
+
+    // Clear cached lists
+    _obstacles.clear();
+    _coins.clear();
+    _powerUps.clear();
 
     // Clear all gameplay elements
     removeWhere((component) =>
@@ -207,19 +238,19 @@ class KangarooGame extends FlameGame
     background.gameSpeed = 0;
     ground.gameSpeed = 0;
 
-    // Stop all moving components
-    children.whereType<Obstacle>().forEach((obstacle) {
+    // Stop all moving components using cached lists
+    for (final obstacle in _obstacles) {
       obstacle.gameSpeed = 0;
-    });
-    children.whereType<Coin>().forEach((coin) {
+    }
+    for (final coin in _coins) {
       coin.gameSpeed = 0;
-    });
-    children.whereType<PowerUp>().forEach((powerUp) {
+    }
+    for (final powerUp in _powerUps) {
       powerUp.gameSpeed = 0;
-    });
-    children.whereType<Cloud>().forEach((cloud) {
+    }
+    for (final cloud in _clouds) {
       cloud.gameSpeed = 0;
-    });
+    }
 
     // Stop all spawning
     obstacleTimer.removeFromParent();
@@ -247,6 +278,11 @@ class KangarooGame extends FlameGame
     if (gameOverTriggered) return;
 
     uiOverlay.hideGameOver();
+
+    // Clear cached lists
+    _obstacles.clear();
+    _coins.clear();
+    _powerUps.clear();
 
     // Clear all gameplay elements
     removeWhere((component) =>
@@ -298,25 +334,37 @@ class KangarooGame extends FlameGame
         gameSpeed = 700;
       }
 
-      // Update all moving components with new speed
+      // Update all moving components with new speed using cached lists
       ground.gameSpeed = gameSpeed;
       background.gameSpeed = gameSpeed;
 
-      children.whereType<Obstacle>().forEach((obstacle) {
+      for (final obstacle in _obstacles) {
         obstacle.gameSpeed = gameSpeed;
-      });
+      }
 
-      children.whereType<Coin>().forEach((coin) {
+      for (final coin in _coins) {
         coin.gameSpeed = gameSpeed;
-      });
+      }
 
-      children.whereType<PowerUp>().forEach((powerUp) {
+      for (final powerUp in _powerUps) {
         powerUp.gameSpeed = gameSpeed;
-      });
+      }
 
-      children.whereType<Cloud>().forEach((cloud) {
+      for (final cloud in _clouds) {
         cloud.gameSpeed = gameSpeed;
-      });
+      }
+
+      // Performance: Only process magnet effect if active
+      if (isMagnetActive) {
+        final kangarooPos = kangaroo.position;
+        for (final coin in _coins) {
+          final distance = coin.position.distanceTo(kangarooPos);
+          if (distance < 200) {
+            final direction = (kangarooPos - coin.position).normalized();
+            coin.position += direction * 300 * dt;
+          }
+        }
+      }
     }
   }
 
@@ -385,35 +433,24 @@ class KangarooGame extends FlameGame
 
   void startCoinSpawning() {
     coinTimer = TimerComponent(
-      period: 0.8,
+      period: 2.5, // Much less frequent spawning
       repeat: true,
       onTick: () {
-        if (gameState == GameState.playing && random.nextDouble() < 0.3) {
-          // Spawn coin pattern
-          final pattern = random.nextInt(3);
+        if (gameState == GameState.playing && random.nextDouble() < 0.4) {
+          // Spawn single valuable coins instead of patterns
           final startX = size.x + 50;
-
-          switch (pattern) {
-            case 0: // Single coin
-              add(Coin()
-                ..position = Vector2(startX, 300 + random.nextDouble() * 100)
-                ..gameSpeed = gameSpeed);
-              break;
-            case 1: // Arc of coins
-              for (int i = 0; i < 5; i++) {
-                add(Coin()
-                  ..position = Vector2(startX + i * 40, 250 + sin(i * 0.5) * 50)
-                  ..gameSpeed = gameSpeed);
-              }
-              break;
-            case 2: // Line of coins
-              final y = 250 + random.nextDouble() * 100;
-              for (int i = 0; i < 3; i++) {
-                add(Coin()
-                  ..position = Vector2(startX + i * 40, y)
-                  ..gameSpeed = gameSpeed);
-              }
-              break;
+          final coinY = 250 + random.nextDouble() * 120;
+          
+          // Just spawn 1-2 coins at a time
+          add(Coin()
+            ..position = Vector2(startX, coinY)
+            ..gameSpeed = gameSpeed);
+          
+          // 30% chance for a second coin nearby
+          if (random.nextDouble() < 0.3) {
+            add(Coin()
+              ..position = Vector2(startX + 60, coinY + random.nextDouble() * 40 - 20)
+              ..gameSpeed = gameSpeed);
           }
         }
       },
@@ -439,18 +476,18 @@ class KangarooGame extends FlameGame
   }
 
   void collectCoin() {
-    coins++;
+    coins += 5; // Each coin is now worth 5!
     uiOverlay.updateCoins(coins);
 
-    // Reduce particle effects at high speeds to improve performance
-    final particleCount = gameSpeed > 500 ? 5 : 10;
+    // Performance: Skip particles if reducing effects
+    if (shouldReduceEffects) return;
 
     // Add particle effect
     add(
       ParticleSystemComponent(
         position: kangaroo.position + Vector2(20, 20),
         particle: Particle.generate(
-          count: particleCount,
+          count: 5,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 200),
             speed: Vector2(
@@ -516,12 +553,12 @@ class KangarooGame extends FlameGame
   }
 
   void addGameOverParticles() {
-    // Reduce particles for better performance
+    // Performance: Reduce particles
     add(
       ParticleSystemComponent(
         position: size / 2,
         particle: Particle.generate(
-          count: 30,
+          count: shouldReduceEffects ? 15 : 30,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 300),
             speed: Vector2(
@@ -544,7 +581,7 @@ class KangarooGame extends FlameGame
       ParticleSystemComponent(
         position: kangaroo.position + kangaroo.size / 2,
         particle: Particle.generate(
-          count: 30,
+          count: shouldReduceEffects ? 15 : 30,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 100),
             speed: Vector2(
