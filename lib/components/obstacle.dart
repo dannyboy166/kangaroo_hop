@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
-enum ObstacleType { rock, cactus, log, bird }
+enum ObstacleType { rock, cactus, log }
 
 class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
   double gameSpeed = 250.0;
@@ -24,9 +24,6 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         break;
       case ObstacleType.log:
         size = Vector2(80, 40);
-        break;
-      case ObstacleType.bird:
-        size = Vector2(60, 40);
         break;
     }
   }
@@ -48,10 +45,6 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         break;
       case ObstacleType.log:
         _createLog();
-        break;
-      case ObstacleType.bird:
-        _createBird();
-        position.y = groundY - size.y - 100 - game.random.nextDouble() * 100;
         break;
     }
     
@@ -212,72 +205,6 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     }
   }
   
-  void _createBird() {
-    // Shadow for body
-    add(CircleComponent(
-      radius: 15,
-      position: Vector2(33, 23),
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
-    ));
-    
-    // Body
-    add(CircleComponent(
-      radius: 15,
-      position: Vector2(30, 20),
-      paint: Paint()..color = const Color(0xFF8B008B),
-    ));
-    
-    // Highlight for body
-    add(CircleComponent(
-      radius: 15,
-      position: Vector2(29, 19),
-      paint: Paint()..color = const Color(0xFFDA70D6).withValues(alpha: 0.6),
-    ));
-    
-    // Head
-    add(CircleComponent(
-      radius: 10,
-      position: Vector2(45, 18),
-      paint: Paint()..color = const Color(0xFF9932CC),
-    ));
-    
-    // Beak
-    final beakVertices = [
-      Vector2(55, 18),
-      Vector2(65, 20),
-      Vector2(55, 22),
-    ];
-    add(PolygonComponent(
-      beakVertices,
-      paint: Paint()..color = Colors.orange,
-    ));
-    
-    // Eye
-    add(CircleComponent(
-      radius: 3,
-      position: Vector2(48, 16),
-      paint: Paint()..color = Colors.white,
-    ));
-    add(CircleComponent(
-      radius: 2,
-      position: Vector2(49, 16),
-      paint: Paint()..color = Colors.black,
-    ));
-    
-    // Wings
-    final wingVertices = [
-      Vector2(15, 15),
-      Vector2(5, 20),
-      Vector2(10, 30),
-      Vector2(25, 25),
-    ];
-    add(PolygonComponent(
-      wingVertices,
-      paint: Paint()..color = const Color(0xFF8B008B).withValues(alpha: 0.8),
-    ));
-    
-    // Note: Bird movement handled in update() method to sync with collision
-  }
   
   @override
   void update(double dt) {
@@ -286,11 +213,6 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     // Move obstacle left
     position.x -= gameSpeed * dt;
     
-    // Special movement for bird
-    if (type == ObstacleType.bird) {
-      final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
-      position.y += sin(time * 3) * 30 * dt;
-    }
     
     // Remove when off screen
     if (position.x + size.x < -50) {

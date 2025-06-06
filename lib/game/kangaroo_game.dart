@@ -17,15 +17,17 @@ import '../components/kangaroo.dart';
 import '../components/obstacle.dart';
 import '../components/power_up.dart';
 import '../components/ui_overlay.dart';
+import 'audio_manager.dart';
 
 enum GameState { menu, playing, gameOver }
 
-class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasCollisionDetection, TapDetector {
+class KangarooGame extends FlameGame
+    with HasKeyboardHandlerComponents, HasCollisionDetection, TapDetector {
   late Kangaroo kangaroo;
   late Background background;
   late Ground ground;
   late UiOverlay uiOverlay;
-  
+
   GameState gameState = GameState.menu;
   int score = 0;
   int highScore = 0;
@@ -37,90 +39,96 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   bool hasDoubleJump = false;
   bool hasShield = false;
   bool isMagnetActive = false;
-  
+
   // For distance-based scoring
   double distanceTraveled = 0.0;
-  
+
   // For game over delay
   bool gameOverTriggered = false;
-  
+
   // For jump input handling
   Set<LogicalKeyboardKey> pressedKeys = <LogicalKeyboardKey>{};
   bool wasJumpPressed = false;
-  
+
   late TimerComponent obstacleTimer;
   late TimerComponent cloudTimer;
   late TimerComponent coinTimer;
   late TimerComponent powerUpTimer;
-  
+
   Random random = Random();
-  
+
   static const double minObstacleSpacing = 1.2;
   static const double maxObstacleSpacing = 2.5;
-  static const double minGapSpacing = 0.1; // Minimum gap between close obstacles
+  static const double minGapSpacing =
+      0.1; // Minimum gap between close obstacles
   static const double maxGapSpacing = 3; // Maximum gap between close obstacles
-  
+
   bool lastWasGap = false; // Track if last obstacles were a gap
-  
+
   @override
   Color backgroundColor() => const Color(0xFF87CEEB);
-  
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     // Set up camera to match screen size
     camera.viewfinder.visibleGameSize = size;
-    
+
     // Load saved data
     await loadSavedData();
-    
+
+    // Preload audio files
+    await AudioManager().preloadAudio();
+
     // Initialize components
     background = Background();
     ground = Ground();
     kangaroo = Kangaroo();
     uiOverlay = UiOverlay();
-    
+
     await add(background);
     await add(ground);
     await add(kangaroo);
     await add(uiOverlay);
-    
+
     // Ensure UI is always on top
     uiOverlay.priority = 1000;
-    
+
     // Start cloud spawning
     startCloudSpawning();
-    
+
     showMenu();
   }
-  
+
   @override
-  KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+  KeyEventResult onKeyEvent(
+      KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
     super.onKeyEvent(event, keysPressed);
-    
+
     pressedKeys = keysPressed;
-    
+
     // Check for jump keys
     final jumpKeys = {
       LogicalKeyboardKey.space,
       LogicalKeyboardKey.arrowUp,
     };
-    
+
     final isJumpPressed = jumpKeys.any((key) => keysPressed.contains(key));
-    
+
     // Only jump if key was just pressed (not held)
     if (isJumpPressed && !wasJumpPressed) {
       handleJumpInput();
     }
-    
+
     wasJumpPressed = isJumpPressed;
     return KeyEventResult.handled;
   }
-  
+
   void handleJumpInput() {
     switch (gameState) {
       case GameState.menu:
+        AudioManager().playButtonClick();
         startGame();
         break;
       case GameState.playing:
@@ -128,12 +136,13 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         break;
       case GameState.gameOver:
         if (!gameOverTriggered) {
+          AudioManager().playButtonClick();
           restart();
         }
         break;
     }
   }
-  
+
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
@@ -142,19 +151,20 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     distanceTraveled = 0.0;
     gameOverTriggered = false;
     lastWasGap = false;
-    
+
     // Clear all gameplay elements
-    removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
-    
+    removeWhere((component) =>
+        component is Obstacle || component is Coin || component is PowerUp);
+
     uiOverlay.showMenu();
-    
+
     // Update high score display in menu
     uiOverlay.highScoreText.text = 'Best: $highScore';
   }
-  
+
   void startGame() {
     if (gameOverTriggered) return;
-    
+
     gameState = GameState.playing;
     score = 0;
     coins = 0;
@@ -165,31 +175,35 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     hasShield = false;
     isMagnetActive = false;
     lastWasGap = false;
-    
+
     kangaroo.reset();
     uiOverlay.hideMenu();
     uiOverlay.showGameUI();
-    
+
     // Update high score display
     uiOverlay.highScoreText.text = 'Best: $highScore';
-    
+
     // Start spawning game elements
     scheduleNextObstacle();
     startCoinSpawning();
     startPowerUpSpawning();
   }
-  
+
   void gameOver() {
     if (gameOverTriggered) return;
-    
+
     gameOverTriggered = true;
     gameState = GameState.gameOver;
-    
+
+    // Play game over sound and stop music
+    AudioManager().playGameOver();
+    AudioManager().stopMusic();
+
     // Stop background movement immediately
     gameSpeed = 0;
     background.gameSpeed = 0;
     ground.gameSpeed = 0;
-    
+
     // Stop all moving components
     children.whereType<Obstacle>().forEach((obstacle) {
       obstacle.gameSpeed = 0;
@@ -203,59 +217,60 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     children.whereType<Cloud>().forEach((cloud) {
       cloud.gameSpeed = 0;
     });
-    
+
     // Stop all spawning
     obstacleTimer.removeFromParent();
     coinTimer.removeFromParent();
     powerUpTimer.removeFromParent();
-    
+
     // Update high score and total coins
     if (score > highScore) {
       highScore = score;
     }
     totalCoins += coins;
     saveData();
-    
+
     // Show game over with particle effects
     addGameOverParticles();
     uiOverlay.showGameOver(score, highScore, coins);
-    
+
     // Add delay before allowing restart
     Future.delayed(const Duration(seconds: 1), () {
       gameOverTriggered = false;
     });
   }
-  
+
   void restart() {
     if (gameOverTriggered) return;
-    
+
     uiOverlay.hideGameOver();
-    
+
     // Clear all gameplay elements
-    removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
-    
+    removeWhere((component) =>
+        component is Obstacle || component is Coin || component is PowerUp);
+
     kangaroo.reset();
     startGame();
   }
-  
+
   @override
   bool onTapDown(TapDownInfo info) {
     handleJumpInput();
     return true;
   }
-  
+
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     if (gameState == GameState.playing) {
       // Update distance traveled
       distanceTraveled += gameSpeed * dt;
-      
+
       // Update score based on distance (1 point per ~25 pixels = roughly 1 meter)
       score = (distanceTraveled / 25).round();
       uiOverlay.updateScore(score);
-      
+
       // Increase game speed gradually based on score (slower progression)
       if (score < 1000) {
         // 250 to 450 over first 1000 points
@@ -276,35 +291,35 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         // Cap at 700 after score 3500
         gameSpeed = 700;
       }
-      
+
       // Update all moving components with new speed
       ground.gameSpeed = gameSpeed;
       background.gameSpeed = gameSpeed;
-      
+
       children.whereType<Obstacle>().forEach((obstacle) {
         obstacle.gameSpeed = gameSpeed;
       });
-      
+
       children.whereType<Coin>().forEach((coin) {
         coin.gameSpeed = gameSpeed;
       });
-      
+
       children.whereType<PowerUp>().forEach((powerUp) {
         powerUp.gameSpeed = gameSpeed;
       });
-      
+
       children.whereType<Cloud>().forEach((cloud) {
         cloud.gameSpeed = gameSpeed;
       });
     }
   }
-  
+
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
-    
+
     double spacing;
     bool willBeGap = false;
-    
+
     // After score 1000, introduce gaps (close double obstacles)
     if (score >= 1000 && !lastWasGap) {
       // 30% chance to create a gap (close double obstacles)
@@ -312,38 +327,43 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         willBeGap = true;
         // Calculate gap spacing that scales with speed (random between min and max)
         final speedRatio = gameSpeed / 450.0; // 450 is speed at score 1000
-        final baseGapSpacing = minGapSpacing + random.nextDouble() * (maxGapSpacing - minGapSpacing);
+        final baseGapSpacing = minGapSpacing +
+            random.nextDouble() * (maxGapSpacing - minGapSpacing);
         spacing = baseGapSpacing * speedRatio;
       } else {
         // Normal spacing
-        spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+        spacing = minObstacleSpacing +
+            random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
       }
     } else {
       // Either score < 1000 or last was a gap, use normal spacing
-      spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+      spacing = minObstacleSpacing +
+          random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
     }
-    
+
     final adjustedSpacing = spacing / speedMultiplier;
-    
+
     obstacleTimer = TimerComponent(
       period: adjustedSpacing,
       repeat: false,
       onTick: () {
         if (gameState == GameState.playing) {
-          final obstacle = Obstacle(type: ObstacleType.values[random.nextInt(ObstacleType.values.length)]);
+          final obstacle = Obstacle(
+              type: ObstacleType
+                  .values[random.nextInt(ObstacleType.values.length)]);
           obstacle.gameSpeed = gameSpeed;
           add(obstacle);
-          
+
           // Update gap tracking
           lastWasGap = willBeGap;
-          
+
           scheduleNextObstacle();
         }
       },
     );
     add(obstacleTimer);
   }
-  
+
   void startCloudSpawning() {
     cloudTimer = TimerComponent(
       period: 3.0,
@@ -356,7 +376,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     );
     add(cloudTimer);
   }
-  
+
   void startCoinSpawning() {
     coinTimer = TimerComponent(
       period: 0.8,
@@ -366,7 +386,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
           // Spawn coin pattern
           final pattern = random.nextInt(3);
           final startX = size.x + 50;
-          
+
           switch (pattern) {
             case 0: // Single coin
               add(Coin()
@@ -394,14 +414,15 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     );
     add(coinTimer);
   }
-  
+
   void startPowerUpSpawning() {
     powerUpTimer = TimerComponent(
       period: 15.0,
       repeat: true,
       onTick: () {
         if (gameState == GameState.playing) {
-          final type = PowerUpType.values[random.nextInt(PowerUpType.values.length)];
+          final type =
+              PowerUpType.values[random.nextInt(PowerUpType.values.length)];
           add(PowerUp(type: type)
             ..position = Vector2(size.x + 50, 250 + random.nextDouble() * 100)
             ..gameSpeed = gameSpeed);
@@ -410,20 +431,24 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     );
     add(powerUpTimer);
   }
-  
+
   void collectCoin() {
     coins++;
     uiOverlay.updateCoins(coins);
+
+    // Reduce particle effects at high speeds to improve performance
+    final particleCount = gameSpeed > 500 ? 5 : 10;
     
     // Add particle effect
     add(
       ParticleSystemComponent(
         position: kangaroo.position + Vector2(20, 20),
         particle: Particle.generate(
-          count: 10,
+          count: particleCount,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 200),
-            speed: Vector2(random.nextDouble() * 200 - 100, -random.nextDouble() * 200),
+            speed: Vector2(
+                random.nextDouble() * 200 - 100, -random.nextDouble() * 200),
             position: Vector2.zero(),
             child: CircleParticle(
               radius: 3,
@@ -434,10 +459,11 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       ),
     );
   }
-  
+
   void activatePowerUp(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
+        AudioManager().playDoubleJump();
         hasDoubleJump = true;
         kangaroo.hasDoubleJump = true;
         kangaroo.activateDoubleJumpIndicator();
@@ -448,6 +474,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         });
         break;
       case PowerUpType.shield:
+        AudioManager().playShieldActivate();
         hasShield = true;
         kangaroo.activateShield();
         Future.delayed(const Duration(seconds: 8), () {
@@ -456,6 +483,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         });
         break;
       case PowerUpType.magnet:
+        AudioManager().playMagnetActivate();
         isMagnetActive = true;
         kangaroo.activateMagnetIndicator();
         Future.delayed(const Duration(seconds: 10), () {
@@ -464,10 +492,10 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
         });
         break;
     }
-    
+
     uiOverlay.showPowerUpNotification(type);
   }
-  
+
   void onObstacleCollision() {
     if (gameState == GameState.playing) {
       if (hasShield) {
@@ -480,13 +508,14 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       }
     }
   }
-  
+
   void addGameOverParticles() {
+    // Reduce particles for better performance
     add(
       ParticleSystemComponent(
         position: size / 2,
         particle: Particle.generate(
-          count: 50,
+          count: 30,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 300),
             speed: Vector2(
@@ -503,7 +532,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       ),
     );
   }
-  
+
   void addShieldBreakParticles() {
     add(
       ParticleSystemComponent(
@@ -526,13 +555,13 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
       ),
     );
   }
-  
+
   Future<void> loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('kangaroo_hop_high_score') ?? 0;
     totalCoins = prefs.getInt('kangaroo_hop_total_coins') ?? 0;
   }
-  
+
   Future<void> saveData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('kangaroo_hop_high_score', highScore);

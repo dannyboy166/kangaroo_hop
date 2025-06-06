@@ -7,6 +7,7 @@ import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
+import '../game/audio_manager.dart';
 import 'coin.dart';
 import 'obstacle.dart';
 import 'power_up.dart';
@@ -188,16 +189,20 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       angle = 0;
     }
     
-    // Animate legs while running
+    // Animate legs while running (reduce frequency at high speeds for performance)
     if (isOnGround && game.gameState == GameState.playing) {
       final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
-      legFront.angle = sin(time * 10) * 0.3;
-      legBack.angle = -sin(time * 10) * 0.3;
-      armFront.angle = 0.3 + sin(time * 8) * 0.2;
-      armBack.angle = -0.3 - sin(time * 8) * 0.2;
       
-      // Bob up and down slightly
-      body.position.y = 20 + sin(time * 12) * 2;
+      // Reduce animation frequency at high speeds to improve performance
+      final animationMultiplier = game.gameSpeed > 500 ? 0.7 : 1.0;
+      
+      legFront.angle = sin(time * 10 * animationMultiplier) * 0.3;
+      legBack.angle = -sin(time * 10 * animationMultiplier) * 0.3;
+      armFront.angle = 0.3 + sin(time * 8 * animationMultiplier) * 0.2;
+      armBack.angle = -0.3 - sin(time * 8 * animationMultiplier) * 0.2;
+      
+      // Bob up and down slightly (reduced at high speeds)
+      body.position.y = 20 + sin(time * 12 * animationMultiplier) * 2;
     }
     
     // Magnet effect - attract nearby coins
@@ -236,28 +241,38 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     isOnGround = false;
     isJumping = true;
     
+    // Play jump sound
+    if (speed == doubleJumpSpeed) {
+      AudioManager().playDoubleJump();
+    } else {
+      AudioManager().playJump();
+    }
+    
     // Add jump particles
     addJumpParticles();
     
-    // Reset scale before applying new squash and stretch effect
+    // Immediately reset scale and clear all effects to prevent interference
     visualContainer.scale = Vector2.all(1.0);
     visualContainer.removeWhere((component) => component is ScaleEffect);
     
-    // Squash and stretch effect on visual container only
-    visualContainer.add(
-      ScaleEffect.to(
-        Vector2(1.2, 0.8),
-        EffectController(duration: 0.1),
-        onComplete: () {
-          visualContainer.add(
-            ScaleEffect.to(
-              Vector2(1.0, 1.0),
-              EffectController(duration: 0.2),
-            ),
-          );
-        },
-      ),
-    );
+    // Add a small delay to ensure clean state before animation
+    Future.delayed(Duration.zero, () {
+      // Squash and stretch effect on visual container only
+      visualContainer.add(
+        ScaleEffect.to(
+          Vector2(1.2, 0.8),
+          EffectController(duration: 0.1),
+          onComplete: () {
+            visualContainer.add(
+              ScaleEffect.to(
+                Vector2(1.0, 1.0),
+                EffectController(duration: 0.2),
+              ),
+            );
+          },
+        ),
+      );
+    });
   }
   
   void land() {
@@ -267,28 +282,37 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     isJumping = false;
     jumpCount = 0;
     
+    // Play landing sound
+    AudioManager().playLand();
+    
     // Landing particles
     addLandingParticles();
     
-    // Reset scale before applying new squash effect
+    // Only apply landing squash if not immediately jumping again
+    // Reset scale and clear all effects first
     visualContainer.scale = Vector2.all(1.0);
     visualContainer.removeWhere((component) => component is ScaleEffect);
     
-    // Squash effect on landing - visual container only
-    visualContainer.add(
-      ScaleEffect.to(
-        Vector2(1.3, 0.7),
-        EffectController(duration: 0.1),
-        onComplete: () {
-          visualContainer.add(
-            ScaleEffect.to(
-              Vector2(1.0, 1.0),
-              EffectController(duration: 0.15),
-            ),
-          );
-        },
-      ),
-    );
+    // Add a small delay to check if we're still on ground (not jumping again)
+    Future.delayed(const Duration(milliseconds: 16), () {
+      if (isOnGround && !isJumping) {
+        // Squash effect on landing - visual container only
+        visualContainer.add(
+          ScaleEffect.to(
+            Vector2(1.3, 0.7),
+            EffectController(duration: 0.1),
+            onComplete: () {
+              visualContainer.add(
+                ScaleEffect.to(
+                  Vector2(1.0, 1.0),
+                  EffectController(duration: 0.15),
+                ),
+              );
+            },
+          ),
+        );
+      }
+    });
   }
   
   void reset() {
@@ -454,11 +478,14 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
   }
   
   void addJumpParticles() {
+    // Reduce particles at high speeds for better performance
+    final particleCount = game.gameSpeed > 500 ? 5 : 10;
+    
     game.add(
       ParticleSystemComponent(
         position: position + Vector2(size.x / 2, size.y),
         particle: Particle.generate(
-          count: 10,
+          count: particleCount,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 100),
             speed: Vector2(
@@ -500,11 +527,14 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
   }
   
   void addLandingParticles() {
+    // Reduce particles at high speeds for better performance
+    final particleCount = game.gameSpeed > 500 ? 7 : 15;
+    
     game.add(
       ParticleSystemComponent(
         position: position + Vector2(size.x / 2, size.y),
         particle: Particle.generate(
-          count: 15,
+          count: particleCount,
           generator: (i) => AcceleratedParticle(
             acceleration: Vector2(0, 200),
             speed: Vector2(
@@ -527,9 +557,11 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     super.onCollisionStart(intersectionPoints, other);
     
     if (other is Obstacle) {
+      AudioManager().playCollision();
       game.onObstacleCollision();
       return true;
     } else if (other is Coin) {
+      AudioManager().playCoinCollect(gameSpeed: game.gameSpeed);
       other.collect();
       game.collectCoin();
       return true;
