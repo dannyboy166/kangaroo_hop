@@ -4,13 +4,18 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/background.dart';
+import '../components/cloud.dart';
+import '../components/coin.dart';
 import '../components/ground.dart';
 import '../components/kangaroo.dart';
 import '../components/obstacle.dart';
+import '../components/power_up.dart';
+import '../components/ui_overlay.dart';
 
 enum GameState { menu, playing, gameOver }
 
@@ -18,137 +23,56 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   late Kangaroo kangaroo;
   late Background background;
   late Ground ground;
-  late TextComponent scoreText;
-  late TextComponent highScoreText;
-  late TextComponent gameOverText;
-  late TextComponent restartText;
-  late TextComponent menuText;
+  late UiOverlay uiOverlay;
   
   GameState gameState = GameState.menu;
   int score = 0;
   int highScore = 0;
-  double gameSpeed = 200.0;
+  int coins = 0;
+  int totalCoins = 0;
+  double gameSpeed = 250.0;
+  double baseSpeed = 250.0;
+  double speedMultiplier = 1.0;
+  bool hasDoubleJump = false;
+  bool hasShield = false;
+  bool isMagnetActive = false;
+  
   late TimerComponent obstacleTimer;
+  late TimerComponent cloudTimer;
+  late TimerComponent coinTimer;
+  late TimerComponent powerUpTimer;
+  
   Random random = Random();
   
-  static const double minObstacleSpacing = 1.5;
-  static const double maxObstacleSpacing = 3.0;
+  static const double minObstacleSpacing = 1.2;
+  static const double maxObstacleSpacing = 2.5;
+  
+  @override
+  Color backgroundColor() => const Color(0xFF87CEEB);
   
   @override
   Future<void> onLoad() async {
     await super.onLoad();
     
-    // Load high score from local storage
-    await loadHighScore();
+    // Set up camera to match screen size
+    camera.viewfinder.visibleGameSize = size;
+    
+    // Load saved data
+    await loadSavedData();
     
     // Initialize components
     background = Background();
     ground = Ground();
     kangaroo = Kangaroo();
+    uiOverlay = UiOverlay();
     
-    add(background);
-    add(ground);
-    add(kangaroo);
+    await add(background);
+    await add(ground);
+    await add(kangaroo);
+    await add(uiOverlay);
     
-    // Initialize UI text components
-    scoreText = TextComponent(
-      text: 'Score: 0',
-      position: Vector2(20, 20),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(1, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    highScoreText = TextComponent(
-      text: 'High Score: $highScore',
-      position: Vector2(20, 50),
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(1, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    gameOverText = TextComponent(
-      text: 'GAME OVER',
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.red,
-          fontSize: 48,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    restartText = TextComponent(
-      text: 'Tap to Restart',
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(1, 1),
-              blurRadius: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    menuText = TextComponent(
-      text: 'KANGAROO HOP\n\nTap to Start!',
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          height: 1.5,
-          shadows: [
-            Shadow(
-              color: Colors.black,
-              offset: Offset(2, 2),
-              blurRadius: 4,
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    add(scoreText);
-    add(highScoreText);
+    // Start cloud spawning
+    startCloudSpawning();
     
     showMenu();
   }
@@ -156,72 +80,61 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
+    gameSpeed = baseSpeed;
     
-    // Clear obstacles
-    removeWhere((component) => component is Obstacle);
+    // Clear all gameplay elements
+    removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
     
-    // Position menu text
-    menuText.position = Vector2(size.x / 2, size.y / 2);
-    add(menuText);
-    
-    // Hide game UI
-    scoreText.removeFromParent();
-    highScoreText.removeFromParent();
+    uiOverlay.showMenu();
   }
   
   void startGame() {
     gameState = GameState.playing;
     score = 0;
-    gameSpeed = 200.0;
+    coins = 0;
+    gameSpeed = baseSpeed;
+    speedMultiplier = 1.0;
+    hasDoubleJump = false;
+    hasShield = false;
+    isMagnetActive = false;
     
-    // Remove menu text
-    menuText.removeFromParent();
+    kangaroo.reset();
+    uiOverlay.hideMenu();
+    uiOverlay.showGameUI();
     
-    // Show game UI
-    add(scoreText);
-    add(highScoreText);
-    
-    // Start spawning obstacles
+    // Start spawning game elements
     scheduleNextObstacle();
+    startCoinSpawning();
+    startPowerUpSpawning();
   }
   
   void gameOver() {
     gameState = GameState.gameOver;
     
-    // Stop obstacle spawning
-    if (obstacleTimer.parent != null) {
-      obstacleTimer.removeFromParent();
-    }
+    // Stop all spawning
+    obstacleTimer.removeFromParent();
+    coinTimer.removeFromParent();
+    powerUpTimer.removeFromParent();
     
-    // Update high score if needed
+    // Update high score and total coins
     if (score > highScore) {
       highScore = score;
-      saveHighScore();
     }
+    totalCoins += coins;
+    saveData();
     
-    // Position game over text
-    gameOverText.position = Vector2(size.x / 2, size.y / 2 - 40);
-    restartText.position = Vector2(size.x / 2, size.y / 2 + 40);
-    
-    add(gameOverText);
-    add(restartText);
-    
-    // Update high score display
-    highScoreText.text = 'High Score: $highScore';
+    // Show game over with particle effects
+    addGameOverParticles();
+    uiOverlay.showGameOver(score, highScore, coins);
   }
   
   void restart() {
-    // Remove game over UI
-    gameOverText.removeFromParent();
-    restartText.removeFromParent();
+    uiOverlay.hideGameOver();
     
-    // Clear obstacles
-    removeWhere((component) => component is Obstacle);
+    // Clear all gameplay elements
+    removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
     
-    // Reset kangaroo
     kangaroo.reset();
-    
-    // Start new game
     startGame();
   }
   
@@ -247,35 +160,51 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     
     if (gameState == GameState.playing) {
       // Update score
-      score += (dt * 10).round();
-      scoreText.text = 'Score: $score';
+      score += (dt * 10 * speedMultiplier).round();
+      uiOverlay.updateScore(score);
       
       // Increase game speed gradually
-      gameSpeed = 200.0 + (score * 0.1);
+      speedMultiplier = 1.0 + (score / 1000) * 0.5;
+      gameSpeed = baseSpeed * speedMultiplier;
       
-      // Update components with game speed
+      // Cap maximum speed
+      if (gameSpeed > 500) gameSpeed = 500;
+      
+      // Update all moving components with new speed
       ground.gameSpeed = gameSpeed;
       background.gameSpeed = gameSpeed;
       
-      // Update obstacles
-      for (final component in children) {
-        if (component is Obstacle) {
-          component.gameSpeed = gameSpeed;
-        }
-      }
+      children.whereType<Obstacle>().forEach((obstacle) {
+        obstacle.gameSpeed = gameSpeed;
+      });
+      
+      children.whereType<Coin>().forEach((coin) {
+        coin.gameSpeed = gameSpeed;
+      });
+      
+      children.whereType<PowerUp>().forEach((powerUp) {
+        powerUp.gameSpeed = gameSpeed;
+      });
+      
+      children.whereType<Cloud>().forEach((cloud) {
+        cloud.gameSpeed = gameSpeed;
+      });
     }
   }
   
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
     
+    // Vary spacing based on game speed
     final spacing = minObstacleSpacing + random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+    final adjustedSpacing = spacing / speedMultiplier;
+    
     obstacleTimer = TimerComponent(
-      period: spacing,
+      period: adjustedSpacing,
       repeat: false,
       onTick: () {
         if (gameState == GameState.playing) {
-          final obstacle = Obstacle();
+          final obstacle = Obstacle(type: ObstacleType.values[random.nextInt(ObstacleType.values.length)]);
           obstacle.gameSpeed = gameSpeed;
           add(obstacle);
           scheduleNextObstacle();
@@ -285,19 +214,201 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     add(obstacleTimer);
   }
   
+  void startCloudSpawning() {
+    cloudTimer = TimerComponent(
+      period: 3.0,
+      repeat: true,
+      onTick: () {
+        final cloud = Cloud();
+        cloud.gameSpeed = gameSpeed;
+        add(cloud);
+      },
+    );
+    add(cloudTimer);
+  }
+  
+  void startCoinSpawning() {
+    coinTimer = TimerComponent(
+      period: 0.8,
+      repeat: true,
+      onTick: () {
+        if (gameState == GameState.playing && random.nextDouble() < 0.3) {
+          // Spawn coin pattern
+          final pattern = random.nextInt(3);
+          final startX = size.x + 50;
+          
+          switch (pattern) {
+            case 0: // Single coin
+              add(Coin()
+                ..position = Vector2(startX, 300 + random.nextDouble() * 100)
+                ..gameSpeed = gameSpeed);
+              break;
+            case 1: // Arc of coins
+              for (int i = 0; i < 5; i++) {
+                add(Coin()
+                  ..position = Vector2(startX + i * 40, 250 + sin(i * 0.5) * 50)
+                  ..gameSpeed = gameSpeed);
+              }
+              break;
+            case 2: // Line of coins
+              final y = 250 + random.nextDouble() * 100;
+              for (int i = 0; i < 3; i++) {
+                add(Coin()
+                  ..position = Vector2(startX + i * 40, y)
+                  ..gameSpeed = gameSpeed);
+              }
+              break;
+          }
+        }
+      },
+    );
+    add(coinTimer);
+  }
+  
+  void startPowerUpSpawning() {
+    powerUpTimer = TimerComponent(
+      period: 15.0,
+      repeat: true,
+      onTick: () {
+        if (gameState == GameState.playing) {
+          final type = PowerUpType.values[random.nextInt(PowerUpType.values.length)];
+          add(PowerUp(type: type)
+            ..position = Vector2(size.x + 50, 250 + random.nextDouble() * 100)
+            ..gameSpeed = gameSpeed);
+        }
+      },
+    );
+    add(powerUpTimer);
+  }
+  
+  void collectCoin() {
+    coins++;
+    uiOverlay.updateCoins(coins);
+    
+    // Add particle effect
+    add(
+      ParticleSystemComponent(
+        position: kangaroo.position + Vector2(20, 20),
+        particle: Particle.generate(
+          count: 10,
+          generator: (i) => AcceleratedParticle(
+            acceleration: Vector2(0, 200),
+            speed: Vector2(random.nextDouble() * 200 - 100, -random.nextDouble() * 200),
+            position: Vector2.zero(),
+            child: CircleParticle(
+              radius: 3,
+              paint: Paint()..color = Colors.yellow,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void activatePowerUp(PowerUpType type) {
+    switch (type) {
+      case PowerUpType.doubleJump:
+        hasDoubleJump = true;
+        kangaroo.hasDoubleJump = true;
+        Future.delayed(const Duration(seconds: 10), () {
+          hasDoubleJump = false;
+          kangaroo.hasDoubleJump = false;
+        });
+        break;
+      case PowerUpType.shield:
+        hasShield = true;
+        kangaroo.activateShield();
+        Future.delayed(const Duration(seconds: 8), () {
+          hasShield = false;
+          kangaroo.deactivateShield();
+        });
+        break;
+      case PowerUpType.magnet:
+        isMagnetActive = true;
+        Future.delayed(const Duration(seconds: 10), () {
+          isMagnetActive = false;
+        });
+        break;
+      case PowerUpType.speed:
+        final oldMultiplier = speedMultiplier;
+        speedMultiplier *= 1.5;
+        Future.delayed(const Duration(seconds: 5), () {
+          speedMultiplier = oldMultiplier;
+        });
+        break;
+    }
+    
+    uiOverlay.showPowerUpNotification(type);
+  }
+  
   void onObstacleCollision() {
     if (gameState == GameState.playing) {
-      gameOver();
+      if (hasShield) {
+        hasShield = false;
+        kangaroo.deactivateShield();
+        // Add shield break effect
+        addShieldBreakParticles();
+      } else {
+        gameOver();
+      }
     }
   }
   
-  Future<void> loadHighScore() async {
-    final prefs = await SharedPreferences.getInstance();
-    highScore = prefs.getInt('kangaroo_hop_high_score') ?? 0;
+  void addGameOverParticles() {
+    add(
+      ParticleSystemComponent(
+        position: size / 2,
+        particle: Particle.generate(
+          count: 50,
+          generator: (i) => AcceleratedParticle(
+            acceleration: Vector2(0, 300),
+            speed: Vector2(
+              random.nextDouble() * 400 - 200,
+              -random.nextDouble() * 400,
+            ),
+            position: Vector2.zero(),
+            child: CircleParticle(
+              radius: random.nextDouble() * 5 + 2,
+              paint: Paint()..color = Colors.orange.withOpacity(0.8),
+            ),
+          ),
+        ),
+      ),
+    );
   }
   
-  Future<void> saveHighScore() async {
+  void addShieldBreakParticles() {
+    add(
+      ParticleSystemComponent(
+        position: kangaroo.position + kangaroo.size / 2,
+        particle: Particle.generate(
+          count: 30,
+          generator: (i) => AcceleratedParticle(
+            acceleration: Vector2(0, 100),
+            speed: Vector2(
+              random.nextDouble() * 300 - 150,
+              -random.nextDouble() * 200,
+            ),
+            position: Vector2.zero(),
+            child: CircleParticle(
+              radius: 4,
+              paint: Paint()..color = Colors.blue.withOpacity(0.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Future<void> loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    highScore = prefs.getInt('kangaroo_hop_high_score') ?? 0;
+    totalCoins = prefs.getInt('kangaroo_hop_total_coins') ?? 0;
+  }
+  
+  Future<void> saveData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('kangaroo_hop_high_score', highScore);
+    await prefs.setInt('kangaroo_hop_total_coins', totalCoins);
   }
 }
