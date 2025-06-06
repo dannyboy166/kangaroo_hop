@@ -176,6 +176,9 @@ class KangarooGame extends FlameGame
     isMagnetActive = false;
     lastWasGap = false;
 
+    // IMPORTANT: Reset audio counters to prevent sound issues
+    AudioManager().resetCounters();
+
     kangaroo.reset();
     uiOverlay.hideMenu();
     uiOverlay.showGameUI();
@@ -248,6 +251,9 @@ class KangarooGame extends FlameGame
     // Clear all gameplay elements
     removeWhere((component) =>
         component is Obstacle || component is Coin || component is PowerUp);
+
+    // Reset audio counters here too
+    AudioManager().resetCounters();
 
     kangaroo.reset();
     startGame();
@@ -438,7 +444,7 @@ class KangarooGame extends FlameGame
 
     // Reduce particle effects at high speeds to improve performance
     final particleCount = gameSpeed > 500 ? 5 : 10;
-    
+
     // Add particle effect
     add(
       ParticleSystemComponent(

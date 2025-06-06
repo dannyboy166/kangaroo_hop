@@ -12,12 +12,13 @@ import 'coin.dart';
 import 'obstacle.dart';
 import 'power_up.dart';
 
-class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
+class Kangaroo extends PositionComponent
+    with HasGameReference<KangarooGame>, CollisionCallbacks {
   static const double jumpSpeed = -500.0;
   static const double doubleJumpSpeed = -450.0;
   static const double gravity = 1200.0;
   static const double groundY = 400.0;
-  
+
   double verticalSpeed = 0.0;
   bool isOnGround = true;
   bool isJumping = false;
@@ -25,7 +26,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
   bool hasUsedDoubleJump = false;
   bool isShielded = false;
   int jumpCount = 0;
-  
+
   late PositionComponent visualContainer;
   late RectangleComponent body;
   late RectangleComponent tail;
@@ -37,90 +38,90 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
   late RectangleComponent armBack;
   late RectangleComponent legFront;
   late RectangleComponent legBack;
-  
+
   CircleComponent? shieldVisual;
   PositionComponent? doubleJumpIndicator;
   PositionComponent? magnetIndicator;
   late TimerComponent jumpParticleTimer;
   double rotation = 0;
-  
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     size = Vector2(60, 80);
     position = Vector2(150, groundY - size.y);
-    
+
     // Create visual container for scaling effects
     visualContainer = PositionComponent();
     add(visualContainer);
-    
+
     // Create kangaroo body parts
     body = RectangleComponent(
       size: Vector2(40, 50),
       position: Vector2(10, 20),
       paint: Paint()..color = const Color(0xFFD2691E),
     );
-    
+
     tail = RectangleComponent(
       size: Vector2(25, 35),
       position: Vector2(-15, 40),
       paint: Paint()..color = const Color(0xFFCD853F),
       angle: 0.3,
     );
-    
+
     ear1 = RectangleComponent(
       size: Vector2(8, 15),
       position: Vector2(15, 5),
       paint: Paint()..color = const Color(0xFFD2691E),
       angle: -0.2,
     );
-    
+
     ear2 = RectangleComponent(
       size: Vector2(8, 15),
       position: Vector2(30, 5),
       paint: Paint()..color = const Color(0xFFD2691E),
       angle: 0.2,
     );
-    
+
     eye = CircleComponent(
       radius: 3,
       position: Vector2(35, 25),
       paint: Paint()..color = Colors.black,
     );
-    
+
     pouch = RectangleComponent(
       size: Vector2(20, 15),
       position: Vector2(20, 45),
       paint: Paint()..color = const Color(0xFFDEB887),
     );
-    
+
     armFront = RectangleComponent(
       size: Vector2(8, 20),
       position: Vector2(35, 35),
       paint: Paint()..color = const Color(0xFFD2691E),
       angle: 0.3,
     );
-    
+
     armBack = RectangleComponent(
       size: Vector2(8, 20),
       position: Vector2(15, 35),
       paint: Paint()..color = const Color(0xFFCD853F),
       angle: -0.3,
     );
-    
+
     legFront = RectangleComponent(
       size: Vector2(12, 25),
       position: Vector2(30, 55),
       paint: Paint()..color = const Color(0xFFD2691E),
     );
-    
+
     legBack = RectangleComponent(
       size: Vector2(12, 25),
       position: Vector2(15, 55),
       paint: Paint()..color = const Color(0xFFCD853F),
     );
-    
+
     // Add all body parts to visual container
     visualContainer.add(tail);
     visualContainer.add(legBack);
@@ -132,15 +133,16 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     visualContainer.add(ear1);
     visualContainer.add(ear2);
     visualContainer.add(eye);
-    
+
     // Add collision detection - separate from visual scaling
-    final hitbox = RectangleHitbox(size: Vector2(40, 70), position: Vector2(10, 10));
+    final hitbox =
+        RectangleHitbox(size: Vector2(40, 70), position: Vector2(10, 10));
     add(hitbox);
-    
+
     // Add idle animation
     addIdleAnimation();
   }
-  
+
   void addIdleAnimation() {
     // Subtle breathing animation
     body.add(
@@ -153,7 +155,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
         ),
       ),
     );
-    
+
     // Ear twitch
     ear1.add(
       RotateEffect.by(
@@ -167,20 +169,20 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   @override
   void update(double dt) {
     super.update(dt);
-    
+
     // Apply gravity and physics
     if (!isOnGround || isJumping) {
       verticalSpeed += gravity * dt;
       position.y += verticalSpeed * dt;
-      
+
       // Rotate slightly while jumping
       rotation = (verticalSpeed / jumpSpeed) * 0.2;
       angle = rotation;
-      
+
       // Check if landed
       if (position.y >= groundY - size.y) {
         land();
@@ -188,23 +190,23 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     } else {
       angle = 0;
     }
-    
+
     // Animate legs while running (reduce frequency at high speeds for performance)
     if (isOnGround && game.gameState == GameState.playing) {
       final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
-      
+
       // Reduce animation frequency at high speeds to improve performance
       final animationMultiplier = game.gameSpeed > 500 ? 0.7 : 1.0;
-      
+
       legFront.angle = sin(time * 10 * animationMultiplier) * 0.3;
       legBack.angle = -sin(time * 10 * animationMultiplier) * 0.3;
       armFront.angle = 0.3 + sin(time * 8 * animationMultiplier) * 0.2;
       armBack.angle = -0.3 - sin(time * 8 * animationMultiplier) * 0.2;
-      
+
       // Bob up and down slightly (reduced at high speeds)
       body.position.y = 20 + sin(time * 12 * animationMultiplier) * 2;
     }
-    
+
     // Magnet effect - attract nearby coins
     if (game.isMagnetActive) {
       game.children.whereType<Coin>().forEach((coin) {
@@ -216,10 +218,10 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       });
     }
   }
-  
+
   void jump() {
     if (game.gameState != GameState.playing) return;
-    
+
     if (isOnGround) {
       // First jump
       performJump(jumpSpeed);
@@ -230,31 +232,27 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       performJump(doubleJumpSpeed);
       hasUsedDoubleJump = true;
       jumpCount = 2;
-      
+
       // Add double jump particles
       addDoubleJumpParticles();
     }
   }
-  
+
   void performJump(double speed) {
     verticalSpeed = speed;
     isOnGround = false;
     isJumping = true;
-    
-    // Play jump sound
-    if (speed == doubleJumpSpeed) {
-      AudioManager().playDoubleJump();
-    } else {
-      AudioManager().playJump();
-    }
-    
+
+// Always play regular jump sound for both jumps and double jumps
+    AudioManager().playJump(); // Same sound for ALL jumps
+
     // Add jump particles
     addJumpParticles();
-    
+
     // Immediately reset scale and clear all effects to prevent interference
     visualContainer.scale = Vector2.all(1.0);
     visualContainer.removeWhere((component) => component is ScaleEffect);
-    
+
     // Add a small delay to ensure clean state before animation
     Future.delayed(Duration.zero, () {
       // Squash and stretch effect on visual container only
@@ -274,25 +272,24 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       );
     });
   }
-  
+
   void land() {
     position.y = groundY - size.y;
     verticalSpeed = 0.0;
     isOnGround = true;
     isJumping = false;
     jumpCount = 0;
-    
-    // Play landing sound
-    AudioManager().playLand();
-    
+
+    // REMOVED: AudioManager().playLand(); - No landing sound needed!
+
     // Landing particles
     addLandingParticles();
-    
+
     // Only apply landing squash if not immediately jumping again
     // Reset scale and clear all effects first
     visualContainer.scale = Vector2.all(1.0);
     visualContainer.removeWhere((component) => component is ScaleEffect);
-    
+
     // Add a small delay to check if we're still on ground (not jumping again)
     Future.delayed(const Duration(milliseconds: 16), () {
       if (isOnGround && !isJumping) {
@@ -314,7 +311,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       }
     });
   }
-  
+
   void reset() {
     position = Vector2(150, groundY - size.y);
     verticalSpeed = 0.0;
@@ -325,19 +322,19 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
     jumpCount = 0;
     angle = 0;
     visualContainer.scale = Vector2.all(1);
-    
+
     if (isShielded) {
       deactivateShield();
     }
-    
+
     // Remove power-up indicators
     removeDoubleJumpIndicator();
     removeMagnetIndicator();
   }
-  
+
   void activateShield() {
     isShielded = true;
-    
+
     // Add shield visual as a bubble around the kangaroo
     shieldVisual = CircleComponent(
       radius: 50,
@@ -348,9 +345,9 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0,
     );
-    
+
     add(shieldVisual!); // Add to main component, not visual container
-    
+
     // Add pulsing effect to shield
     shieldVisual!.add(
       ScaleEffect.to(
@@ -363,18 +360,18 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   void deactivateShield() {
     isShielded = false;
     shieldVisual?.removeFromParent();
     shieldVisual = null;
   }
-  
+
   void activateDoubleJumpIndicator() {
     if (doubleJumpIndicator != null) return;
-    
+
     doubleJumpIndicator = PositionComponent();
-    
+
     // Create sparkles around the kangaroo for double jump
     for (int i = 0; i < 8; i++) {
       final angle = (i * pi / 4);
@@ -387,9 +384,9 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
         ),
         paint: Paint()..color = Colors.purple.withValues(alpha: 0.9),
       );
-      
+
       doubleJumpIndicator!.add(sparkle);
-      
+
       // Add twinkling animation to each sparkle
       sparkle.add(
         OpacityEffect.to(
@@ -401,7 +398,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
           ),
         ),
       );
-      
+
       // Add floating motion
       sparkle.add(
         MoveEffect.by(
@@ -414,20 +411,20 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
         ),
       );
     }
-    
+
     add(doubleJumpIndicator!);
   }
-  
+
   void removeDoubleJumpIndicator() {
     doubleJumpIndicator?.removeFromParent();
     doubleJumpIndicator = null;
   }
-  
+
   void activateMagnetIndicator() {
     if (magnetIndicator != null) return;
-    
+
     magnetIndicator = PositionComponent(position: Vector2(30, 75));
-    
+
     // Magnetic field effect
     for (int i = 0; i < 3; i++) {
       magnetIndicator!.add(CircleComponent(
@@ -438,7 +435,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
           ..strokeWidth = 2,
       ));
     }
-    
+
     // Magnet symbol
     magnetIndicator!.add(TextComponent(
       text: '🧲',
@@ -457,9 +454,9 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
         ),
       ),
     ));
-    
+
     add(magnetIndicator!);
-    
+
     // Add rotating magnetic field animation
     magnetIndicator!.add(
       RotateEffect.by(
@@ -471,16 +468,16 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   void removeMagnetIndicator() {
     magnetIndicator?.removeFromParent();
     magnetIndicator = null;
   }
-  
+
   void addJumpParticles() {
     // Reduce particles at high speeds for better performance
     final particleCount = game.gameSpeed > 500 ? 5 : 10;
-    
+
     game.add(
       ParticleSystemComponent(
         position: position + Vector2(size.x / 2, size.y),
@@ -502,7 +499,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   void addDoubleJumpParticles() {
     game.add(
       ParticleSystemComponent(
@@ -525,11 +522,11 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   void addLandingParticles() {
     // Reduce particles at high speeds for better performance
     final particleCount = game.gameSpeed > 500 ? 7 : 15;
-    
+
     game.add(
       ParticleSystemComponent(
         position: position + Vector2(size.x / 2, size.y),
@@ -551,17 +548,18 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       ),
     );
   }
-  
+
   @override
-  bool onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
+  bool onCollisionStart(
+      Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
-    
+
     if (other is Obstacle) {
-      AudioManager().playCollision();
+      // REMOVED: AudioManager().playCollision(); - Game over sound plays instead!
       game.onObstacleCollision();
       return true;
     } else if (other is Coin) {
-      AudioManager().playCoinCollect(gameSpeed: game.gameSpeed);
+      // AudioManager().playCoinCollect(gameSpeed: game.gameSpeed);
       other.collect();
       game.collectCoin();
       return true;
@@ -570,7 +568,7 @@ class Kangaroo extends PositionComponent with HasGameReference<KangarooGame>, Co
       game.activatePowerUp(other.type);
       return true;
     }
-    
+
     return false;
   }
 }
