@@ -6,6 +6,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/particles.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/background.dart';
@@ -36,6 +37,16 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   bool hasDoubleJump = false;
   bool hasShield = false;
   bool isMagnetActive = false;
+  
+  // For distance-based scoring
+  double distanceTraveled = 0.0;
+  
+  // For game over delay
+  bool gameOverTriggered = false;
+  
+  // For jump input handling
+  Set<LogicalKeyboardKey> pressedKeys = <LogicalKeyboardKey>{};
+  bool wasJumpPressed = false;
   
   late TimerComponent obstacleTimer;
   late TimerComponent cloudTimer;
@@ -77,21 +88,69 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     showMenu();
   }
   
+  @override
+  KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+    super.onKeyEvent(event, keysPressed);
+    
+    pressedKeys = keysPressed;
+    
+    // Check for jump keys
+    final jumpKeys = {
+      LogicalKeyboardKey.space,
+      LogicalKeyboardKey.arrowUp,
+    };
+    
+    final isJumpPressed = jumpKeys.any((key) => keysPressed.contains(key));
+    
+    // Only jump if key was just pressed (not held)
+    if (isJumpPressed && !wasJumpPressed) {
+      handleJumpInput();
+    }
+    
+    wasJumpPressed = isJumpPressed;
+    return KeyEventResult.handled;
+  }
+  
+  void handleJumpInput() {
+    switch (gameState) {
+      case GameState.menu:
+        startGame();
+        break;
+      case GameState.playing:
+        kangaroo.jump();
+        break;
+      case GameState.gameOver:
+        if (!gameOverTriggered) {
+          restart();
+        }
+        break;
+    }
+  }
+  
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
     gameSpeed = baseSpeed;
+    speedMultiplier = 1.0;
+    distanceTraveled = 0.0;
+    gameOverTriggered = false;
     
     // Clear all gameplay elements
     removeWhere((component) => component is Obstacle || component is Coin || component is PowerUp);
     
     uiOverlay.showMenu();
+    
+    // Update high score display in menu
+    uiOverlay.highScoreText.text = 'Best: $highScore';
   }
   
   void startGame() {
+    if (gameOverTriggered) return;
+    
     gameState = GameState.playing;
     score = 0;
     coins = 0;
+    distanceTraveled = 0.0;
     gameSpeed = baseSpeed;
     speedMultiplier = 1.0;
     hasDoubleJump = false;
@@ -102,6 +161,9 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     uiOverlay.hideMenu();
     uiOverlay.showGameUI();
     
+    // Update high score display
+    uiOverlay.highScoreText.text = 'Best: $highScore';
+    
     // Start spawning game elements
     scheduleNextObstacle();
     startCoinSpawning();
@@ -109,7 +171,29 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   }
   
   void gameOver() {
+    if (gameOverTriggered) return;
+    
+    gameOverTriggered = true;
     gameState = GameState.gameOver;
+    
+    // Stop background movement immediately
+    gameSpeed = 0;
+    background.gameSpeed = 0;
+    ground.gameSpeed = 0;
+    
+    // Stop all moving components
+    children.whereType<Obstacle>().forEach((obstacle) {
+      obstacle.gameSpeed = 0;
+    });
+    children.whereType<Coin>().forEach((coin) {
+      coin.gameSpeed = 0;
+    });
+    children.whereType<PowerUp>().forEach((powerUp) {
+      powerUp.gameSpeed = 0;
+    });
+    children.whereType<Cloud>().forEach((cloud) {
+      cloud.gameSpeed = 0;
+    });
     
     // Stop all spawning
     obstacleTimer.removeFromParent();
@@ -126,9 +210,16 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     // Show game over with particle effects
     addGameOverParticles();
     uiOverlay.showGameOver(score, highScore, coins);
+    
+    // Add delay before allowing restart
+    Future.delayed(const Duration(seconds: 1), () {
+      gameOverTriggered = false;
+    });
   }
   
   void restart() {
+    if (gameOverTriggered) return;
+    
     uiOverlay.hideGameOver();
     
     // Clear all gameplay elements
@@ -140,17 +231,7 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
   
   @override
   bool onTapDown(TapDownInfo info) {
-    switch (gameState) {
-      case GameState.menu:
-        startGame();
-        break;
-      case GameState.playing:
-        kangaroo.jump();
-        break;
-      case GameState.gameOver:
-        restart();
-        break;
-    }
+    handleJumpInput();
     return true;
   }
   
@@ -159,16 +240,19 @@ class KangarooGame extends FlameGame with HasKeyboardHandlerComponents, HasColli
     super.update(dt);
     
     if (gameState == GameState.playing) {
-      // Update score
-      score += (dt * 10 * speedMultiplier).round();
+      // Update distance traveled
+      distanceTraveled += gameSpeed * dt;
+      
+      // Update score based on distance (1 point per ~25 pixels = roughly 1 meter)
+      score = (distanceTraveled / 25).round();
       uiOverlay.updateScore(score);
       
-      // Increase game speed gradually
-      speedMultiplier = 1.0 + (score / 1000) * 0.5;
+      // Increase game speed gradually based on score
+      speedMultiplier = 1.0 + (score / 500) * 0.5; // Speed increases every 500 points
       gameSpeed = baseSpeed * speedMultiplier;
       
       // Cap maximum speed
-      if (gameSpeed > 500) gameSpeed = 500;
+      if (gameSpeed > 600) gameSpeed = 600;
       
       // Update all moving components with new speed
       ground.gameSpeed = gameSpeed;

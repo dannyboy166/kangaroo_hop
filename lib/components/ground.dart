@@ -10,6 +10,7 @@ class Ground extends Component with HasGameReference<KangarooGame> {
   late List<GroundSegment> segments;
   static const double groundY = 400.0;
   static const double groundHeight = 200.0;
+  static const double segmentWidth = 800.0;
   
   @override
   Future<void> onLoad() async {
@@ -18,10 +19,11 @@ class Ground extends Component with HasGameReference<KangarooGame> {
     segments = [];
     
     // Create multiple ground segments for seamless scrolling
-    for (int i = 0; i < 3; i++) {
+    // Use 4 segments to ensure better overlap
+    for (int i = 0; i < 4; i++) {
       final segment = GroundSegment(
-        position: Vector2(i * 800.0, groundY),
-        size: Vector2(800, groundHeight),
+        position: Vector2(i * segmentWidth, groundY),
+        size: Vector2(segmentWidth, groundHeight),
       );
       segments.add(segment);
       add(segment);
@@ -36,16 +38,17 @@ class Ground extends Component with HasGameReference<KangarooGame> {
     for (final segment in segments) {
       segment.position.x -= gameSpeed * dt;
       
-      // Wrap around when off screen
-      if (segment.position.x + segment.size.x < 0) {
+      // Wrap around when segment is completely off screen
+      if (segment.position.x + segment.size.x <= 0) {
         // Find the rightmost segment
         double maxX = -double.infinity;
         for (final s in segments) {
-          if (s.position.x > maxX) {
+          if (s != segment && s.position.x > maxX) {
             maxX = s.position.x;
           }
         }
-        segment.position.x = maxX + segment.size.x;
+        // Position this segment immediately after the rightmost one with NO gap
+        segment.position.x = maxX + segmentWidth - 10; // Subtract 1 pixel to ensure overlap
       }
     }
   }
