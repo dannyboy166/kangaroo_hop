@@ -38,8 +38,8 @@ class Ground extends Component with HasGameReference<KangarooGame> {
     for (final segment in segments) {
       segment.position.x -= gameSpeed * dt;
       
-      // Wrap around when segment is completely off screen
-      if (segment.position.x + segment.size.x <= 0) {
+      // More generous wrap condition - start wrapping earlier
+      if (segment.position.x + segment.size.x <= -50) { // Wrap when 50px off screen instead of 0
         // Find the rightmost segment
         double maxX = -double.infinity;
         for (final s in segments) {
@@ -47,8 +47,8 @@ class Ground extends Component with HasGameReference<KangarooGame> {
             maxX = s.position.x;
           }
         }
-        // Position this segment immediately after the rightmost one with NO gap
-        segment.position.x = maxX + segmentWidth - 10; // Subtract 1 pixel to ensure overlap
+        // Position this segment with MORE overlap to prevent gaps at high speeds
+        segment.position.x = maxX + segmentWidth - 50; // Increased overlap from 10 to 50 pixels
       }
     }
   }

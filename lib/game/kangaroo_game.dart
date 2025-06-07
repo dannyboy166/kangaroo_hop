@@ -394,6 +394,7 @@ class KangarooGame extends FlameGame
     }
   }
 // In lib/game/kangaroo_game.dart - Update scheduleNextObstacle method
+// Replace your scheduleNextObstacle method with this complete fix
 
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
@@ -401,32 +402,36 @@ class KangarooGame extends FlameGame
     double spacing;
     bool willBeGap = false;
 
-    // After score 1500, introduce gaps (close double obstacles) - MOVED FROM 1000
-    if (score >= 1500 && !lastWasGap) {
-      // 30% chance to create a gap (close double obstacles)
-      if (random.nextDouble() < 0.3) {
-        willBeGap = true;
-        // Calculate gap spacing that scales with speed (random between min and max)
-        final speedRatio =
-            gameSpeed / 600.0; // Updated to 600 (speed at score 1500)
-        final baseGapSpacing = minGapSpacing +
-            random.nextDouble() * (maxGapSpacing - minGapSpacing);
-        spacing = baseGapSpacing * speedRatio;
-      } else {
-        // Normal spacing
+    // After score 1000, introduce gaps with TRUE 30% probability
+    if (score >= 1000) {
+      // After a gap, force minimum spacing to prevent triple obstacles
+      if (lastWasGap) {
+        // Force normal spacing after a gap (no immediate obstacles)
         spacing = minObstacleSpacing +
             random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+        willBeGap = false;
+      } else {
+        // TRUE 30% chance for gaps (only when last wasn't a gap)
+        if (random.nextDouble() < 0.3) {
+          willBeGap = true;
+          // Gaps: random between 0.1-0.3 seconds
+          spacing = 0.1 + random.nextDouble() * 0.2; // 0.1 to 0.3 seconds
+        } else {
+          // Normal obstacles: constant time spacing (1.5-2.5 seconds)
+          spacing = minObstacleSpacing +
+              random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
+        }
       }
     } else {
-      // Either score < 1500 or last was a gap, use normal spacing
+      // Before score 1000: only normal obstacles
       spacing = minObstacleSpacing +
           random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
     }
 
-    final adjustedSpacing = spacing / speedMultiplier;
-
+    // Use spacing directly - no speed adjustment needed
+    // The difficulty comes from speed increase alone
     obstacleTimer = TimerComponent(
-      period: adjustedSpacing,
+      period: spacing,
       repeat: false,
       onTick: () {
         if (gameState == GameState.playing) {
