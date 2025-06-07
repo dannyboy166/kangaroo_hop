@@ -156,7 +156,7 @@ class Kangaroo extends SpriteAnimationComponent
 
     // Add collision detection (made slightly less wide)
     final hitbox =
-        RectangleHitbox(size: Vector2(60, 40), position: Vector2(55, 80));
+        RectangleHitbox(size: Vector2(60, 30), position: Vector2(55, 80));
 
     // Make the collision box visible for testing
     hitbox.paint = Paint()
@@ -475,13 +475,22 @@ class Kangaroo extends SpriteAnimationComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is Obstacle) {
+      print('Collision with obstacle: ${other.type}');
       game.onObstacleCollision(other.type);
       return true;
     } else if (other is Coin) {
-      other.collect();
-      game.collectCoin();
+      print('Collision detected with Coin ${other.id} (isCollected: ${other.isCollected})');
+      
+      // ATOMIC: Only call game.collectCoin() if the coin was successfully collected
+      if (other.tryCollect()) {
+        print('Coin ${other.id} - Successfully collected via collision, calling game.collectCoin()');
+        game.collectCoin();
+      } else {
+        print('Coin ${other.id} - Already collected, skipping game.collectCoin()');
+      }
       return true;
     } else if (other is PowerUp) {
+      print('Collision with power-up: ${other.type}');
       other.collect();
       game.activatePowerUp(other.type);
       return true;
