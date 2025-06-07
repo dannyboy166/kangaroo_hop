@@ -103,7 +103,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
     
     // Add coin text with new color
     coinText = TextComponent(
-      text: '${game.storeManager.totalCoins}',
+      text: '${game.storeManager.totalCoins + game.sessionCoins}',
       position: Vector2(5, 0), // Move text further right for better separation
       anchor: Anchor.center,
       textRenderer: TextPaint(
@@ -206,7 +206,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   }
 
   void updateCoinDisplay() {
-    coinText.text = '${game.storeManager.totalCoins}';
+    coinText.text = '${game.storeManager.totalCoins + game.sessionCoins}';
 
     // Update all store items
     for (final item in storeItems) {

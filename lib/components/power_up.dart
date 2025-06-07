@@ -35,12 +35,26 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
     }
 
     final sprite = await Sprite.load(imagePath);
-    add(SpriteComponent(
+    final spriteComponent = SpriteComponent(
       sprite: sprite,
       size: size,
       anchor: Anchor.center,
       position: size / 2,
-    ));
+    );
+    add(spriteComponent);
+
+    // Add horizontal spinning animation (like a spinning top)
+    spriteComponent.add(
+      ScaleEffect.to(
+        Vector2(-1, 1), // Flip horizontally
+        EffectController(
+          duration: 1.5, // Slightly faster than store for more dynamic feel
+          reverseDuration: 1.5,
+          infinite: true,
+          curve: Curves.easeInOut, // Smooth acceleration/deceleration
+        ),
+      ),
+    );
     
     // Add collision detection
     add(CircleHitbox(radius: 20));

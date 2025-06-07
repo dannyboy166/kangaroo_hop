@@ -615,7 +615,9 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   }
 
   void updateCoins() {
-    coinText.text = '${game.storeManager.totalCoins}';
+    // Show total coins + session coins during gameplay for live updates
+    final totalDisplayCoins = game.storeManager.totalCoins + game.sessionCoins;
+    coinText.text = '$totalDisplayCoins';
   }
 
   void showGameOver(int score, int highScore, int coins,
