@@ -20,7 +20,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   late TextComponent gameOverCoins;
   late TextComponent restartText;
   late TextComponent powerUpNotification;
-  
+
   // Performance: Cache text renderers
   static final _scoreRenderer = TextPaint(
     style: const TextStyle(
@@ -29,7 +29,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   static final _highScoreRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.white70,
@@ -37,7 +37,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   static final _coinRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.yellow,
@@ -45,7 +45,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   static final _menuTitleRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.orange,
@@ -60,7 +60,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       ],
     ),
   );
-  
+
   static final _menuSubtitleRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.white,
@@ -68,7 +68,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   static final _gameOverTitleRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.red,
@@ -91,7 +91,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.w500,
     ),
   );
-  
+
   static final _gameOverScoreRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.white,
@@ -99,7 +99,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   static final _powerUpRenderer = TextPaint(
     style: const TextStyle(
       color: Colors.white,
@@ -107,32 +107,32 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-  
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     // Score display
     scoreText = TextComponent(
       text: 'Score: 0',
       position: Vector2(20, 20),
       textRenderer: _scoreRenderer,
     );
-    
+
     // High score display
     highScoreText = TextComponent(
       text: 'Best: ${game.highScore}',
       position: Vector2(20, 55),
       textRenderer: _highScoreRenderer,
     );
-    
+
     // Coin display
     coinText = TextComponent(
       text: '🪙 0',
       position: Vector2(game.size.x - 120, 20),
       textRenderer: _coinRenderer,
     );
-    
+
     // Menu title
     menuTitle = TextComponent(
       text: 'KANGAROO HOP',
@@ -140,7 +140,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _menuTitleRenderer,
     );
-    
+
     // Menu subtitle
     menuSubtitle = TextComponent(
       text: 'Tap to Start!',
@@ -148,7 +148,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _menuSubtitleRenderer,
     );
-    
+
     // Game over panel (semi-transparent background)
     gameOverPanel = RectangleComponent(
       size: Vector2(500, 320),
@@ -158,7 +158,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ..color = Colors.black.withOpacity(0.85)
         ..style = PaintingStyle.fill,
     );
-    
+
     // Add border to the panel
     final panelBorder = RectangleComponent(
       size: Vector2(500, 320),
@@ -169,7 +169,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ..strokeWidth = 4,
     );
     gameOverPanel.add(panelBorder);
-    
+
     // Game over title
     gameOverTitle = TextComponent(
       text: 'GAME OVER',
@@ -177,7 +177,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _gameOverTitleRenderer,
     );
-    
+
     // Game over message (fun fact)
     gameOverMessage = TextComponent(
       text: '',
@@ -185,7 +185,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _gameOverMessageRenderer,
     );
-    
+
     // Game over score
     gameOverScore = TextComponent(
       text: '',
@@ -193,7 +193,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _gameOverScoreRenderer,
     );
-    
+
     // Game over high score
     gameOverHighScore = TextComponent(
       text: '',
@@ -207,7 +207,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Game over coins
     gameOverCoins = TextComponent(
       text: '',
@@ -220,7 +220,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Restart text
     restartText = TextComponent(
       text: 'Tap to Play Again',
@@ -234,7 +234,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Add all game over elements to the panel
     gameOverPanel.add(gameOverTitle);
     gameOverPanel.add(gameOverMessage);
@@ -242,7 +242,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
     gameOverPanel.add(gameOverHighScore);
     gameOverPanel.add(gameOverCoins);
     gameOverPanel.add(restartText);
-    
+
     // Power-up notification
     powerUpNotification = TextComponent(
       text: '',
@@ -251,11 +251,11 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       textRenderer: _powerUpRenderer,
     );
   }
-  
+
   void showMenu() {
     add(menuTitle);
     add(menuSubtitle);
-    
+
     // Animate menu
     menuTitle.add(
       ScaleEffect.to(
@@ -267,7 +267,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Pulse effect using scale instead of opacity
     menuSubtitle.add(
       ScaleEffect.to(
@@ -280,94 +280,107 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       ),
     );
   }
-  
+
   void hideMenu() {
     menuTitle.removeFromParent();
     menuSubtitle.removeFromParent();
   }
-  
+
   void showGameUI() {
     add(scoreText);
     add(highScoreText);
     add(coinText);
+
+    // Make sure coin display starts with 0
+    updateCoins(0);
   }
-  
+
   void updateScore(int score) {
     scoreText.text = 'Score: $score';
   }
-  
+
   void updateCoins(int coins) {
-    coinText.text = '🪙 $coins';
-    
+    coinText.text = '🪙 $coins'; // Always show the coin symbol with the number
+
     // Performance: Skip pulse animation at high speeds
     if (game.shouldReduceEffects) return;
-    
-    // Pulse animation
-    coinText.add(
-      ScaleEffect.to(
-        Vector2.all(1.2),
-        EffectController(duration: 0.1),
-        onComplete: () {
-          coinText.add(
-            ScaleEffect.to(
-              Vector2.all(1.0),
-              EffectController(duration: 0.1),
-            ),
-          );
-        },
-      ),
-    );
+
+    // Only pulse when coins are actually collected (not when setting to 0)
+    if (coins > 0) {
+      // Pulse animation
+      coinText.add(
+        ScaleEffect.to(
+          Vector2.all(1.2),
+          EffectController(duration: 0.1),
+          onComplete: () {
+            coinText.add(
+              ScaleEffect.to(
+                Vector2.all(1.0),
+                EffectController(duration: 0.1),
+              ),
+            );
+          },
+        ),
+      );
+    }
   }
-  
-  void showGameOver(int score, int highScore, int coins, [ObstacleType? obstacleType]) {
+
+  void showGameOver(int score, int highScore, int coins,
+      [ObstacleType? obstacleType]) {
     // Set obstacle-specific game over message with shorter, punchier text
     String gameOverMessageText = 'Better luck next time!';
     String emojiIcon = '💥';
-    
+
     if (obstacleType != null) {
       switch (obstacleType) {
         case ObstacleType.croc:
-          gameOverMessageText = 'Uh oh, you were caught by a crocodile! 🐊\nCrocs use a death roll to catch prey.';
+          gameOverMessageText =
+              'Uh oh, you were caught by a crocodile! 🐊\nCrocs use a death roll to catch prey.';
           emojiIcon = '🐊';
           break;
         case ObstacleType.emu:
-          gameOverMessageText = 'I think you were run over by an emu! 🦆\nEmus can run over 50km/h!';
+          gameOverMessageText =
+              'I think you were run over by an emu! 🦆\nEmus can run over 50km/h!';
           emojiIcon = '🦆';
           break;
         case ObstacleType.rock:
-          gameOverMessageText = 'You were tripped over a boulder! 🪨\nWatch where you\'re hopping!';
+          gameOverMessageText =
+              'You were tripped over a boulder! 🪨\nWatch where you\'re hopping!';
           emojiIcon = '🪨';
           break;
         case ObstacleType.log:
-          gameOverMessageText = 'Whoops, you faceplanted into a log! That must of hurt.';
+          gameOverMessageText =
+              'Whoops, you faceplanted into a log! That must of hurt.';
           emojiIcon = '🪵';
           break;
         case ObstacleType.cactus:
-          gameOverMessageText = 'Ouch! Jumped into a cactus! 🌵\nThose spines are sharp!';
+          gameOverMessageText =
+              'Ouch! Jumped into a cactus! 🌵\nThose spines are sharp!';
           emojiIcon = '🌵';
           break;
         case ObstacleType.camel:
-          gameOverMessageText = 'You got bumped by a camel! 🐪\nCamels can be grumpy!';
+          gameOverMessageText =
+              'You got bumped by a camel! 🐪\nCamels can be grumpy!';
           emojiIcon = '🐪';
           break;
       }
     }
-    
+
     // Add emoji to title
     gameOverTitle.text = '$emojiIcon GAME OVER $emojiIcon';
     gameOverMessage.text = gameOverMessageText;
     gameOverScore.text = 'Score: $score';
-    
+
     if (score > game.highScore) {
       gameOverHighScore.text = '🎉 NEW BEST: $score! 🎉';
     } else {
       gameOverHighScore.text = 'Best: $highScore';
     }
-    
+
     gameOverCoins.text = 'Coins Earned: $coins 🪙';
-    
+
     add(gameOverPanel);
-    
+
     // Animate game over panel
     gameOverPanel.scale = Vector2.all(0.3);
     gameOverPanel.add(
@@ -379,7 +392,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Pulse effect for restart text
     restartText.add(
       ScaleEffect.to(
@@ -392,27 +405,27 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       ),
     );
   }
-  
+
   void hideGameOver() {
     gameOverPanel.removeFromParent();
   }
-  
+
   void showPowerUpNotification(PowerUpType type) {
     final notifications = {
       PowerUpType.doubleJump: 'Double Jump! 🦘',
       PowerUpType.shield: 'Shield Active! 🛡️',
       PowerUpType.magnet: 'Coin Magnet! 🧲',
     };
-    
+
     powerUpNotification.text = notifications[type]!;
-    
+
     if (powerUpNotification.parent == null) {
       add(powerUpNotification);
     }
-    
+
     // Reset and animate
     powerUpNotification.scale = Vector2.all(0);
-    
+
     powerUpNotification.add(
       ScaleEffect.to(
         Vector2.all(1),

@@ -95,13 +95,16 @@ class KangarooGame extends FlameGame
     kangaroo = Kangaroo();
     uiOverlay = UiOverlay();
 
+    // Set explicit priorities to control rendering order
+    background.priority = 0; // Bottom layer
+    ground.priority = 10; // Above background
+    kangaroo.priority = 100; // Above ground and obstacles
+    uiOverlay.priority = 1000; // Top layer (UI)
+
     await add(background);
     await add(ground);
     await add(kangaroo);
     await add(uiOverlay);
-
-    // Ensure UI is always on top
-    uiOverlay.priority = 1000;
 
     // Start cloud spawning
     startCloudSpawning();
@@ -390,6 +393,7 @@ class KangarooGame extends FlameGame
       }
     }
   }
+// In lib/game/kangaroo_game.dart - Update scheduleNextObstacle method
 
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
@@ -397,13 +401,14 @@ class KangarooGame extends FlameGame
     double spacing;
     bool willBeGap = false;
 
-    // After score 1000, introduce gaps (close double obstacles)
-    if (score >= 1000 && !lastWasGap) {
+    // After score 1500, introduce gaps (close double obstacles) - MOVED FROM 1000
+    if (score >= 1500 && !lastWasGap) {
       // 30% chance to create a gap (close double obstacles)
       if (random.nextDouble() < 0.3) {
         willBeGap = true;
         // Calculate gap spacing that scales with speed (random between min and max)
-        final speedRatio = gameSpeed / 450.0; // 450 is speed at score 1000
+        final speedRatio =
+            gameSpeed / 600.0; // Updated to 600 (speed at score 1500)
         final baseGapSpacing = minGapSpacing +
             random.nextDouble() * (maxGapSpacing - minGapSpacing);
         spacing = baseGapSpacing * speedRatio;
@@ -413,7 +418,7 @@ class KangarooGame extends FlameGame
             random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
       }
     } else {
-      // Either score < 1000 or last was a gap, use normal spacing
+      // Either score < 1500 or last was a gap, use normal spacing
       spacing = minObstacleSpacing +
           random.nextDouble() * (maxObstacleSpacing - minObstacleSpacing);
     }
@@ -470,6 +475,7 @@ class KangarooGame extends FlameGame
 
           final obstacle = Obstacle(type: obstacleType);
           obstacle.gameSpeed = gameSpeed;
+          obstacle.priority = 20; // Above ground but below kangaroo
           add(obstacle);
 
           // Update gap tracking
@@ -489,6 +495,7 @@ class KangarooGame extends FlameGame
       onTick: () {
         final cloud = Cloud();
         cloud.gameSpeed = gameSpeed;
+        cloud.priority = 5; // Behind kangaroo but above background
         add(cloud);
       },
     );
@@ -497,25 +504,26 @@ class KangarooGame extends FlameGame
 
   void startCoinSpawning() {
     coinTimer = TimerComponent(
-      period: 2.5, // Much less frequent spawning
+      period: 2.5,
       repeat: true,
       onTick: () {
         if (gameState == GameState.playing && random.nextDouble() < 0.4) {
-          // Spawn single valuable coins instead of patterns
           final startX = size.x + 50;
           final coinY = 250 + random.nextDouble() * 120;
 
-          // Just spawn 1-2 coins at a time
-          add(Coin()
-            ..position = Vector2(startX, coinY)
-            ..gameSpeed = gameSpeed);
+          final coin1 = Coin();
+          coin1.position = Vector2(startX, coinY);
+          coin1.gameSpeed = gameSpeed;
+          coin1.priority = 50; // Same level as kangaroo or slightly above
+          add(coin1);
 
-          // 30% chance for a second coin nearby
           if (random.nextDouble() < 0.3) {
-            add(Coin()
-              ..position =
-                  Vector2(startX + 60, coinY + random.nextDouble() * 40 - 20)
-              ..gameSpeed = gameSpeed);
+            final coin2 = Coin();
+            coin2.position =
+                Vector2(startX + 60, coinY + random.nextDouble() * 40 - 20);
+            coin2.gameSpeed = gameSpeed;
+            coin2.priority = 50;
+            add(coin2);
           }
         }
       },
@@ -525,17 +533,19 @@ class KangarooGame extends FlameGame
 
   void startPowerUpSpawning() {
     powerUpTimer = TimerComponent(
-      period: 15.0, // Back to normal timing
+      period: 15.0,
       repeat: true,
       onTick: () {
         if (gameState == GameState.playing) {
-          // Random power-ups
           final type =
               PowerUpType.values[random.nextInt(PowerUpType.values.length)];
 
-          add(PowerUp(type: type)
-            ..position = Vector2(size.x + 50, 250 + random.nextDouble() * 100)
-            ..gameSpeed = gameSpeed);
+          final powerUp = PowerUp(type: type);
+          powerUp.position =
+              Vector2(size.x + 50, 250 + random.nextDouble() * 100);
+          powerUp.gameSpeed = gameSpeed;
+          powerUp.priority = 50; // Same level as coins
+          add(powerUp);
         }
       },
     );
