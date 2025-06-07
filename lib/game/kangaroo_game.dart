@@ -408,9 +408,29 @@ class KangarooGame extends FlameGame
       repeat: false,
       onTick: () {
         if (gameState == GameState.playing) {
-          final obstacle = Obstacle(
-              type: ObstacleType
-                  .values[random.nextInt(ObstacleType.values.length)]);
+          // Choose obstacle type based on score
+          ObstacleType obstacleType;
+          if (score >= 1000) {
+            // After score 1000: rock, cactus, or croc (no more logs)
+            final availableTypes = [
+              ObstacleType.rock,
+              ObstacleType.cactus,
+              ObstacleType.croc
+            ];
+            obstacleType =
+                availableTypes[random.nextInt(availableTypes.length)];
+          } else {
+            // Before score 1000: rock, cactus, or log (no crocs yet)
+            final availableTypes = [
+              ObstacleType.rock,
+              ObstacleType.cactus,
+              ObstacleType.log
+            ];
+            obstacleType =
+                availableTypes[random.nextInt(availableTypes.length)];
+          }
+
+          final obstacle = Obstacle(type: obstacleType);
           obstacle.gameSpeed = gameSpeed;
           add(obstacle);
 

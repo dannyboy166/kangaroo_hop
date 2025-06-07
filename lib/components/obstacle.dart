@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -6,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
-enum ObstacleType { rock, cactus, log }
+enum ObstacleType { rock, cactus, log, croc }
 
 class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
   double gameSpeed = 250.0;
@@ -20,13 +19,27 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         size = Vector2(50, 60);
         break;
       case ObstacleType.cactus:
-        size = Vector2(40, 80);
+        size = Vector2(60, 100); // Made bigger (was 40x80)
         break;
       case ObstacleType.log:
         size = Vector2(80, 40);
         break;
+      case ObstacleType.croc:
+        size = Vector2(120, 60); // Made bigger (was 100x50)
+        break;
     }
   }
+  Future<void> _createCroc() async {
+    // Load and add the crocodile image sprite
+    final crocSprite = await game.loadSprite('croc.png');
+    
+    add(SpriteComponent(
+      sprite: crocSprite,
+      size: size, // Use the obstacle's size (120x60)
+      position: Vector2.zero(), // Position relative to obstacle
+    ));
+  }
+  
   
   @override
   Future<void> onLoad() async {
@@ -41,10 +54,13 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         _createRock();
         break;
       case ObstacleType.cactus:
-        _createCactus();
+        await _createCactus();
         break;
       case ObstacleType.log:
         _createLog();
+        break;
+      case ObstacleType.croc:
+        await _createCroc();
         break;
     }
     
@@ -99,59 +115,14 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     ));
   }
   
-  void _createCactus() {
-    // Shadow for main trunk
-    add(RectangleComponent(
-      size: Vector2(20, 60),
-      position: Vector2(13, 23),
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
-    ));
+  Future<void> _createCactus() async {
+    // Load and add the cactus image sprite
+    final cactusSprite = await game.loadSprite('cactus.png');
     
-    // Main trunk
-    add(RectangleComponent(
-      size: Vector2(20, 60),
-      position: Vector2(10, 20),
-      paint: Paint()..color = const Color(0xFF1F5F3F),
-    ));
-    
-    // Highlight for main trunk
-    add(RectangleComponent(
-      size: Vector2(20, 60),
-      position: Vector2(9, 19),
-      paint: Paint()..color = const Color(0xFF2E8B57).withValues(alpha: 0.6),
-    ));
-    
-    // Arms
-    add(RectangleComponent(
-      size: Vector2(15, 30),
-      position: Vector2(-5, 30),
-      paint: Paint()..color = const Color(0xFF228B22),
-    ));
-    
-    add(RectangleComponent(
-      size: Vector2(15, 25),
-      position: Vector2(25, 35),
-      paint: Paint()..color = const Color(0xFF228B22),
-    ));
-    
-    // Spikes
-    for (int i = 0; i < 8; i++) {
-      add(RectangleComponent(
-        size: Vector2(2, 6),
-        position: Vector2(
-          game.random.nextDouble() * 30 + 5,
-          game.random.nextDouble() * 50 + 20,
-        ),
-        paint: Paint()..color = const Color(0xFF3C5030),
-        angle: game.random.nextDouble() * pi,
-      ));
-    }
-    
-    // Flower on top
-    add(CircleComponent(
-      radius: 6,
-      position: Vector2(20, 15),
-      paint: Paint()..color = Colors.pink,
+    add(SpriteComponent(
+      sprite: cactusSprite,
+      size: size, // Use the obstacle's size (60x100)
+      position: Vector2.zero(), // Position relative to obstacle
     ));
   }
   
