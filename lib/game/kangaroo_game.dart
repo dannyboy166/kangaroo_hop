@@ -360,25 +360,30 @@ class KangarooGame extends FlameGame
       for (final cloud in _clouds) {
         cloud.gameSpeed = gameSpeed;
       }
-
-      // Performance: Only process magnet effect if active
       if (isMagnetActive) {
         final kangarooPos = kangaroo.position;
         // Target position should be at the kangaroo's center, lowered
-        final targetPos =
-            kangarooPos + Vector2(70, 85); // Updated to match new position
+        final targetPos = kangarooPos + Vector2(70, 85);
 
-        for (final coin in _coins) {
+        for (final coin in List.from(_coins)) {
+          // Create copy to avoid modification during iteration
+          if (coin.isCollected) continue; // Skip already collected coins
+
           final distance = coin.position.distanceTo(kangarooPos);
           if (distance < 300) {
             // Increased attraction range
             final direction = (targetPos - coin.position).normalized();
             // Much stronger pull force
-            coin.position += direction * 800 * dt; // Increased from 500 to 800
+            coin.position += direction * 800 * dt;
 
-            // Once coin gets very close, snap it to the kangaroo for collection
-            if (distance < 50) {
-              coin.position = targetPos;
+            // Auto-collect when coin gets close enough
+            if (distance < 80) {
+              // Mark as collected first to prevent double collection
+              coin.isCollected = true;
+
+              // Manually trigger collection effects
+              collectCoin(); // This updates score and plays sound
+              coin.collect(); // This handles visual animation and removal
             }
           }
         }
@@ -520,12 +525,14 @@ class KangarooGame extends FlameGame
 
   void startPowerUpSpawning() {
     powerUpTimer = TimerComponent(
-      period: 15.0,
+      period: 15.0, // Back to normal timing
       repeat: true,
       onTick: () {
         if (gameState == GameState.playing) {
+          // Random power-ups
           final type =
               PowerUpType.values[random.nextInt(PowerUpType.values.length)];
+
           add(PowerUp(type: type)
             ..position = Vector2(size.x + 50, 250 + random.nextDouble() * 100)
             ..gameSpeed = gameSpeed);
