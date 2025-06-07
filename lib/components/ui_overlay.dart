@@ -23,6 +23,10 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   late TextComponent gameOverCoins;
   late TextComponent restartText;
   late TextComponent powerUpNotification;
+  
+  // Obstacle icon components for game over screen
+  late PositionComponent obstacleIconLeft;
+  late PositionComponent obstacleIconRight;
 
   // Store buttons
   late RectangleComponent menuStoreButton;
@@ -295,6 +299,19 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     );
     gameOverPanel.add(panelBorder);
 
+    // Obstacle icon containers (positioned on either side of title)
+    obstacleIconLeft = PositionComponent(
+      position: Vector2(150, 40),
+      anchor: Anchor.center,
+      size: Vector2(60, 60),
+    );
+    
+    obstacleIconRight = PositionComponent(
+      position: Vector2(450, 40),
+      anchor: Anchor.center,
+      size: Vector2(60, 60),
+    );
+
     // Game over title
     gameOverTitle = TextComponent(
       text: 'GAME OVER',
@@ -413,6 +430,8 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     gameOverPanel.add(separatorLine);
 
     // Add all game over elements to the panel
+    gameOverPanel.add(obstacleIconLeft);
+    gameOverPanel.add(obstacleIconRight);
     gameOverPanel.add(gameOverTitle);
     gameOverPanel.add(gameOverMessage);
     gameOverPanel.add(gameOverScore);
@@ -420,6 +439,91 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     gameOverPanel.add(gameOverCoins);
     gameOverPanel.add(gameOverStoreButton);
     gameOverPanel.add(restartText);
+  }
+
+  Future<void> _loadObstacleIcons(ObstacleType obstacleType) async {
+    // Clear existing icons
+    obstacleIconLeft.removeWhere((component) => component is SpriteComponent || component is RectangleComponent);
+    obstacleIconRight.removeWhere((component) => component is SpriteComponent || component is RectangleComponent);
+    
+    String spritePath;
+    switch (obstacleType) {
+      case ObstacleType.rock:
+        spritePath = 'rock.png';
+        break;
+      case ObstacleType.cactus:
+        spritePath = 'cactus.png';
+        break;
+      case ObstacleType.log:
+        spritePath = 'log.png';
+        break;
+      case ObstacleType.croc:
+        spritePath = 'croc.png';
+        break;
+      case ObstacleType.emu:
+        spritePath = 'emu.png';
+        break;
+      case ObstacleType.camel:
+        spritePath = 'camel.png';
+        break;
+    }
+    
+    try {
+      final sprite = await game.loadSprite(spritePath);
+      
+      // Add sprite to left icon
+      final leftIcon = SpriteComponent(
+        sprite: sprite,
+        size: Vector2(40, 40),
+        anchor: Anchor.center,
+        position: Vector2(30, 30), // Center within the container
+      );
+      obstacleIconLeft.add(leftIcon);
+      
+      // Add sprite to right icon
+      final rightIcon = SpriteComponent(
+        sprite: sprite,
+        size: Vector2(40, 40),
+        anchor: Anchor.center,
+        position: Vector2(30, 30), // Center within the container
+      );
+      obstacleIconRight.add(rightIcon);
+    } catch (e) {
+      print('Error loading obstacle sprite: $e');
+      // Fallback: add colored rectangles if sprite fails to load
+      final fallbackColor = _getObstacleColor(obstacleType);
+      
+      obstacleIconLeft.add(RectangleComponent(
+        size: Vector2(60, 60),
+        paint: Paint()..color = fallbackColor,
+        anchor: Anchor.center,
+        position: Vector2(30, 30),
+      ));
+      
+      obstacleIconRight.add(RectangleComponent(
+        size: Vector2(60, 60),
+        paint: Paint()..color = fallbackColor,
+        anchor: Anchor.center,
+        position: Vector2(30, 30),
+      ));
+    }
+  }
+  
+  Color _getObstacleColor(ObstacleType obstacleType) {
+    switch (obstacleType) {
+      case ObstacleType.rock:
+        return Colors.grey;
+      case ObstacleType.cactus:
+        return Colors.green;
+      case ObstacleType.log:
+        return Colors.brown;
+      case ObstacleType.croc:
+        return Colors.green.shade800;
+      case ObstacleType.emu:
+        return Colors.brown.shade600;
+      case ObstacleType.camel:
+        return Colors.brown.shade400;
+    }
   }
 
   void _createPowerUpButtons() {
@@ -627,45 +731,41 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       [ObstacleType? obstacleType]) {
     // Set obstacle-specific game over message with shorter, punchier text
     String gameOverMessageText = 'Better luck next time!';
-    String emojiIcon = '💥';
 
     if (obstacleType != null) {
       switch (obstacleType) {
         case ObstacleType.croc:
           gameOverMessageText =
-              'Uh oh, you were caught by a crocodile! 🐊\nCrocs use a death roll to catch prey.';
-          emojiIcon = '🐊';
+              'Uh oh, you were caught by a crocodile!\nCrocs use a death roll to catch prey.';
           break;
         case ObstacleType.emu:
           gameOverMessageText =
-              'I think you were run over by an emu! 🦆\nEmus can run over 50km/h!';
-          emojiIcon = '🦆';
+              'You were run over by an emu!\nEmus can run over 50km/h!';
           break;
         case ObstacleType.rock:
           gameOverMessageText =
-              'You were tripped over a boulder! 🪨\nWatch where you\'re hopping!';
-          emojiIcon = '🪨';
+              'You were tripped over a boulder!\nWatch where you\'re hopping!';
           break;
         case ObstacleType.log:
           gameOverMessageText =
-              'Whoops, you faceplanted into a log! That must of hurt.';
-          emojiIcon = '🪵';
+              'Whoops, you faceplanted into a log!\nThat must of hurt.';
           break;
         case ObstacleType.cactus:
           gameOverMessageText =
-              'Ouch! Jumped into a cactus! 🌵\nThose spines are sharp!';
-          emojiIcon = '🌵';
+              'Ouch! Jumped into a cactus!\nThose spines are sharp!';
           break;
         case ObstacleType.camel:
           gameOverMessageText =
-              'You got bumped by a camel! 🐪\nCamels can be grumpy!';
-          emojiIcon = '🐪';
+              'You got bumped by a camel!\nCamels can be grumpy!';
           break;
       }
+      
+      // Load obstacle icons
+      _loadObstacleIcons(obstacleType);
     }
 
-    // Add emoji to title
-    gameOverTitle.text = '$emojiIcon GAME OVER $emojiIcon';
+    // Set title without emojis (icons will show the obstacle)
+    gameOverTitle.text = 'GAME OVER';
     gameOverMessage.text = gameOverMessageText;
     gameOverScore.text = 'Score: $score';
 

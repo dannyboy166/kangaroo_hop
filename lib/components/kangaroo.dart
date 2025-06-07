@@ -38,6 +38,7 @@ class Kangaroo extends SpriteAnimationComponent
   late SpriteAnimation runningAnimation;
   late SpriteAnimation normalJumpAnimation;
   late SpriteAnimation highJumpAnimation;
+  
 
   @override
   Future<void> onLoad() async {
@@ -241,6 +242,7 @@ class Kangaroo extends SpriteAnimationComponent
     AudioManager().playJump();
     addJumpParticles();
   }
+
 
   void land() {
     position.y = groundY - size.y;

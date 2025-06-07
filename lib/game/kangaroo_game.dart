@@ -424,22 +424,25 @@ class KangarooGame extends FlameGame
       score = (distanceTraveled / 25).round();
       uiOverlay.updateScore(score);
 
-      // Increase game speed gradually based on score
-      if (score < 1000) {
-        // 250 to 500 over first 1000 points
-        gameSpeed = 250 + (score / 1000) * 250;
+      // Increase game speed at moderate pace with extra layer
+      if (score < 650) {
+        // 250 to 500 over first 650 points (halfway between original 1000 and fast 300)
+        gameSpeed = 250 + (score / 650) * 250;
+      } else if (score < 1000) {
+        // 500 to 625 over next 350 points
+        gameSpeed = 500 + ((score - 650) / 350) * 125;
       } else if (score < 1500) {
-        // 500 to 600 over next 500 points
-        gameSpeed = 500 + ((score - 1000) / 500) * 100;
+        // 625 to 750 over next 500 points
+        gameSpeed = 625 + ((score - 1000) / 500) * 125;
       } else if (score < 2000) {
-        // 600 to 700 over next 500 points
-        gameSpeed = 600 + ((score - 1500) / 500) * 100;
-      } else if (score < 3000) {
-        // 700 to 750 over next 1000 points
-        gameSpeed = 700 + ((score - 2000) / 1000) * 50;
+        // 750 to 875 over next 500 points
+        gameSpeed = 750 + ((score - 1500) / 500) * 125;
+      } else if (score < 2500) {
+        // 875 to 1000 over next 500 points (extra layer)
+        gameSpeed = 875 + ((score - 2000) / 500) * 125;
       } else {
-        // Cap at 750 after score 3000
-        gameSpeed = 750;
+        // Cap at 1000 after score 2500
+        gameSpeed = 1000;
       }
 
       // Update all moving components with new speed using cached lists
