@@ -1,4 +1,3 @@
-
 import 'dart:math';
 
 import 'package:flame/collisions.dart';
@@ -51,6 +50,7 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         break;
     }
   }
+
   Future<void> _createCroc() async {
     // Load and add the crocodile image sprite
     final crocSprite = await game.loadSprite('croc.png');
@@ -63,12 +63,44 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
   }
 
   Future<void> _createEmu() async {
-    // Load and add the emu image sprite
-    final emuSprite = await game.loadSprite('emu.png');
+    // Load the emu sprite sheet for animation
+    final emuSpriteSheet = await game.images.load('emu_sheet.png');
     
-    add(SpriteComponent(
-      sprite: emuSprite,
-      size: size, // Use the obstacle's size (80x120)
+    // Create running animation with 4 frames (512x128 = 4 frames of 128x128)
+    final emuRunningAnimation = SpriteAnimation.fromFrameData(
+      emuSpriteSheet,
+      SpriteAnimationData([
+        // Frame 1
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.12, // Slightly slower than kangaroo for variety
+        ),
+        // Frame 2
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(128, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.12,
+        ),
+        // Frame 3
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(256, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.12,
+        ),
+        // Frame 4
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(384, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.12,
+        ),
+      ]),
+    );
+    
+    // Add the animated emu sprite
+    add(SpriteAnimationComponent(
+      animation: emuRunningAnimation,
+      size: size, // Use the obstacle's size
       position: Vector2.zero(), // Position relative to obstacle
     ));
   }
@@ -115,7 +147,7 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         await _createCroc();
         break;
       case ObstacleType.emu:
-        await _createEmu();
+        await _createEmu(); // Now uses animated sprite!
         break;
       case ObstacleType.camel:
         await _createCamel();
@@ -151,7 +183,7 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     
     add(RectangleHitbox(size: hitboxSize, position: hitboxPosition));
     
-    // Debug: Add visual collision box
+    // Debug: Add visual collision box (remove this in production)
     add(RectangleComponent(
       size: hitboxSize,
       position: hitboxPosition,
