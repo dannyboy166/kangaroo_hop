@@ -12,7 +12,7 @@ import 'coin.dart';
 import 'obstacle.dart';
 import 'power_up.dart';
 
-class Kangaroo extends SpriteComponent
+class Kangaroo extends SpriteAnimationComponent
     with HasGameReference<KangarooGame>, CollisionCallbacks {
   static const double jumpSpeed = -500.0;
   static const double doubleJumpSpeed = -450.0;
@@ -27,32 +27,162 @@ class Kangaroo extends SpriteComponent
   bool isShielded = false;
   int jumpCount = 0;
 
-
   CircleComponent? shieldVisual;
   PositionComponent? doubleJumpIndicator;
   PositionComponent? magnetIndicator;
 
   bool hasPlayedLandingSound = false;
 
+  // Animation states
+  late SpriteAnimation idleAnimation;
+  late SpriteAnimation runningAnimation;
+  late SpriteAnimation normalJumpAnimation;
+  late SpriteAnimation highJumpAnimation;
+
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    size = Vector2(40, 40);
+    size = Vector2(120, 120); // 3x bigger (was 40x40)
     position = Vector2(150, groundY - size.y);
 
-    // Load a single sprite
-    sprite = await game.images.load('kangaroo_animations.png').then((image) => 
-      Sprite(image, srcSize: Vector2(40, 40), srcPosition: Vector2.zero()));
+    // Load the sprite sheet (512x256 with 4x2 frames, each 128x128)
+    final spriteSheet = await game.images.load('kangaroo_animations.png');
+    
+    // Create idle animation (just the first frame - for menu screen)
+    idleAnimation = SpriteAnimation.fromFrameData(
+      spriteSheet,
+      SpriteAnimationData.sequenced(
+        amount: 1,
+        stepTime: 1.0,
+        textureSize: Vector2(128, 128),
+        texturePosition: Vector2(0, 0), // Top-left frame (idle)
+      ),
+    );
 
-    // Add collision detection
-    add(RectangleHitbox(size: Vector2(30, 35), position: Vector2(5, 5)));
+    // Create running animation (cycles through multiple frames for movement)
+    runningAnimation = SpriteAnimation.fromFrameData(
+      spriteSheet,
+      SpriteAnimationData([
+        // Alternate between different poses to simulate running
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 0), // Idle/upright
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(128, 0), // Slight crouch (like mid-stride)
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 0), // Back to upright
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(384, 0), // Landing pose (like other foot)
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2,
+        ),
+      ]),
+    );
+
+    // Create normal jump animation (top row: idle -> crouch -> jump -> landing)
+    normalJumpAnimation = SpriteAnimation.fromFrameData(
+      spriteSheet,
+      SpriteAnimationData([
+        // Frame 1: Idle (0, 0)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.1, // Quick start
+        ),
+        // Frame 2: Crouch (128, 0)  
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(128, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.1, // Quick crouch
+        ),
+        // Frame 3: Mid-jump (256, 0)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(256, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.4, // Hold jump pose longer
+        ),
+        // Frame 4: Landing/idle (384, 0)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(384, 0),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2, // Landing
+        ),
+      ]),
+    );
+
+    // Create high jump animation (bottom row: idle -> deep crouch -> high jump -> landing)
+    highJumpAnimation = SpriteAnimation.fromFrameData(
+      spriteSheet,
+      SpriteAnimationData([
+        // Frame 1: Idle (0, 128)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 128),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.1,
+        ),
+        // Frame 2: Deep crouch (128, 128)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(128, 128),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.15, // Slightly longer crouch for high jump
+        ),
+        // Frame 3: Extended high jump (256, 128)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(256, 128),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.5, // Hold high jump pose longer
+        ),
+        // Frame 4: Landing (384, 128)
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(384, 128),
+          srcSize: Vector2(128, 128),
+          stepTime: 0.2,
+        ),
+      ]),
+    );
+
+    // Start with running animation (since game starts in playing state)
+    animation = runningAnimation;
+
+    // Add collision detection (scaled up proportionally) - made visible for testing
+    final hitbox = RectangleHitbox(size: Vector2(30, 75.5), position: Vector2(50, 45));
+    
+    // Make the collision box visible for testing
+    hitbox.paint = Paint()
+      ..color = Colors.red.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    hitbox.renderShape = true;
+    
+    add(hitbox);
   }
-
 
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Update animation based on state
+    if (isOnGround && !isJumping) {
+      // Use running animation when on ground during gameplay, idle only for menu
+      if (game.gameState == GameState.playing) {
+        if (animation != runningAnimation) {
+          animation = runningAnimation;
+        }
+      } else {
+        if (animation != idleAnimation) {
+          animation = idleAnimation;
+        }
+      }
+    }
 
     // Apply gravity and physics
     if (!isOnGround || isJumping) {
@@ -76,33 +206,38 @@ class Kangaroo extends SpriteComponent
     }
   }
 
-
   void jump() {
     if (game.gameState != GameState.playing) return;
 
     if (isOnGround) {
-      // First jump
-      performJump(jumpSpeed);
+      // First jump - use normal jump animation
+      performJump(jumpSpeed, false);
       jumpCount = 1;
       hasUsedDoubleJump = false;
     } else if (hasDoubleJump && !hasUsedDoubleJump && jumpCount == 1) {
-      // Double jump
-      performJump(doubleJumpSpeed);
+      // Double jump - use high jump animation
+      performJump(doubleJumpSpeed, true);
       hasUsedDoubleJump = true;
       jumpCount = 2;
       addDoubleJumpParticles();
     }
   }
 
-  void performJump(double speed) {
+  void performJump(double speed, bool isHighJump) {
     verticalSpeed = speed;
     isOnGround = false;
     isJumping = true;
     hasPlayedLandingSound = false;
 
+    // Play the appropriate jump animation
+    if (isHighJump) {
+      animation = highJumpAnimation;
+    } else {
+      animation = normalJumpAnimation;
+    }
+
     AudioManager().playJump();
     addJumpParticles();
-
   }
 
   void land() {
@@ -125,6 +260,13 @@ class Kangaroo extends SpriteComponent
     jumpCount = 0;
     hasPlayedLandingSound = false;
 
+    // Reset to appropriate animation based on game state
+    if (game.gameState == GameState.playing) {
+      animation = runningAnimation;
+    } else {
+      animation = idleAnimation;
+    }
+
     if (isShielded) {
       deactivateShield();
     }
@@ -133,12 +275,11 @@ class Kangaroo extends SpriteComponent
     removeMagnetIndicator();
   }
 
-  // Keep all your existing methods:
   void activateShield() {
     isShielded = true;
     shieldVisual = CircleComponent(
       radius: 40,
-      position: Vector2(32, 32),
+      position: Vector2(20, 20), // Adjusted for center of 40x40 sprite
       anchor: Anchor.center,
       paint: Paint()
         ..color = Colors.blue.withValues(alpha: 0.3)
@@ -173,12 +314,12 @@ class Kangaroo extends SpriteComponent
 
     for (int i = 0; i < sparkleCount; i++) {
       final angle = (i * pi / (sparkleCount / 2));
-      final radius = 35.0;
+      final radius = 105.0; // 3x bigger (was 35)
       final sparkle = CircleComponent(
-        radius: 3,
+        radius: 9, // 3x bigger (was 3)
         position: Vector2(
-          32 + cos(angle) * radius,
-          32 + sin(angle) * radius,
+          60 + cos(angle) * radius, // Adjusted for 120x120 sprite center
+          60 + sin(angle) * radius,
         ),
         paint: Paint()..color = Colors.purple.withValues(alpha: 0.7),
       );
@@ -209,7 +350,7 @@ class Kangaroo extends SpriteComponent
   void activateMagnetIndicator() {
     if (magnetIndicator != null) return;
 
-    magnetIndicator = PositionComponent(position: Vector2(32, 60));
+    magnetIndicator = PositionComponent(position: Vector2(60, 135)); // Adjusted position for bigger kangaroo
 
     if (game.shouldReduceEffects) {
       magnetIndicator!.add(TextComponent(
@@ -223,11 +364,11 @@ class Kangaroo extends SpriteComponent
     } else {
       for (int i = 0; i < 3; i++) {
         magnetIndicator!.add(CircleComponent(
-          radius: 6 + i * 3,
+          radius: (18 + i * 9), // 3x bigger (was 6 + i * 3)
           paint: Paint()
             ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 2,
+            ..strokeWidth = 6, // 3x bigger (was 2)
         ));
       }
 
