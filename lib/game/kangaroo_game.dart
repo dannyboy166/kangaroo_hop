@@ -35,8 +35,7 @@ class KangarooGame extends FlameGame
   GameState gameState = GameState.menu;
   int score = 0;
   int highScore = 0;
-  int coins = 0;
-  int totalCoins = 0;
+  int sessionCoins = 0; // Coins earned in current game session
   double gameSpeed = 250.0;
   double baseSpeed = 250.0;
   double speedMultiplier = 1.0;
@@ -226,8 +225,8 @@ class KangarooGame extends FlameGame
     // Update high score display in menu
     uiOverlay.highScoreText.text = 'Best: $highScore';
     
-    // Update total coins display
-    uiOverlay.updateTotalCoins();
+    // Update coin display
+    uiOverlay.updateCoins();
   }
 
   void startGame() {
@@ -235,7 +234,7 @@ class KangarooGame extends FlameGame
 
     gameState = GameState.playing;
     score = 0;
-    coins = 0;
+    sessionCoins = 0; // Reset session coins
     distanceTraveled = 0.0;
     gameSpeed = baseSpeed;
     speedMultiplier = 1.0;
@@ -294,17 +293,16 @@ class KangarooGame extends FlameGame
     coinTimer.removeFromParent();
     powerUpTimer.removeFromParent();
 
-    // Update high score and total coins
+    // Update high score and add session coins to total
     if (score > highScore) {
       highScore = score;
     }
-    totalCoins += coins;
-    storeManager.addCoins(coins);
+    storeManager.addCoins(sessionCoins);
     saveData();
 
     // Show game over with particle effects
     addGameOverParticles();
-    uiOverlay.showGameOver(score, highScore, coins, obstacleType);
+    uiOverlay.showGameOver(score, highScore, sessionCoins, obstacleType);
 
     // Add delay before allowing restart
     Future.delayed(const Duration(seconds: 1), () {
@@ -335,17 +333,17 @@ class KangarooGame extends FlameGame
 
   @override
   bool onTapDown(TapDownInfo info) {
-    // Check if store screen is active
+    // Check if store screen is active (highest priority)
     if (storeScreen != null) {
       return storeScreen!.onTapDown(info);
     }
     
-    // Check UI overlay taps
+    // Check UI overlay taps (buttons, etc)
     if (uiOverlay.onTapDown(info)) {
       return true;
     }
     
-    // Default jump input
+    // Only handle jump input if no UI elements were tapped
     handleJumpInput();
     return true;
   }
@@ -429,8 +427,6 @@ class KangarooGame extends FlameGame
       }
     }
   }
-// In lib/game/kangaroo_game.dart - Update scheduleNextObstacle method
-// Replace your scheduleNextObstacle method with this complete fix
 
   void scheduleNextObstacle() {
     if (gameState != GameState.playing) return;
@@ -594,8 +590,10 @@ class KangarooGame extends FlameGame
   }
 
   void collectCoin() {
-    coins += 5; // Each coin is now worth 5!
-    uiOverlay.updateCoins(coins);
+    sessionCoins += 5; // Each coin is worth 5! (but only for this session)
+    
+    // Update UI to show total coins
+    uiOverlay.updateCoins();
 
     // Play coin collect sound with current game speed for smart throttling
     AudioManager().playCoinCollect(gameSpeed: gameSpeed);
@@ -727,13 +725,11 @@ class KangarooGame extends FlameGame
   Future<void> loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
     highScore = prefs.getInt('kangaroo_hop_high_score') ?? 0;
-    totalCoins = prefs.getInt('kangaroo_hop_total_coins') ?? 0;
   }
 
   Future<void> saveData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('kangaroo_hop_high_score', highScore);
-    await prefs.setInt('kangaroo_hop_total_coins', totalCoins);
   }
   
   void showStore() {
@@ -748,6 +744,8 @@ class KangarooGame extends FlameGame
       storeScreen!.removeFromParent();
       storeScreen = null;
     }
+    // Update coin display when closing store
+    uiOverlay.updateCoins();
   }
   
   void _tryUsePowerUp(PowerUpType type) {
