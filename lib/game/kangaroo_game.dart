@@ -57,10 +57,10 @@ class KangarooGame extends FlameGame
 
   Random random = Random();
 
-  static const double minObstacleSpacing = 1.2;
+  static const double minObstacleSpacing = 1.5;
   static const double maxObstacleSpacing = 2.5;
   static const double minGapSpacing = 0.1;
-  static const double maxGapSpacing = 2.5;
+  static const double maxGapSpacing = 1.5;
 
   bool lastWasGap = false;
 
@@ -178,7 +178,7 @@ class KangarooGame extends FlameGame
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
-    gameSpeed = baseSpeed;
+    gameSpeed = 0.0;  // Stop background movement in menu
     speedMultiplier = 1.0;
     distanceTraveled = 0.0;
     gameOverTriggered = false;
@@ -192,6 +192,10 @@ class KangarooGame extends FlameGame
     // Clear all gameplay elements
     removeWhere((component) =>
         component is Obstacle || component is Coin || component is PowerUp);
+
+    // Stop background movement
+    background.gameSpeed = 0.0;
+    ground.gameSpeed = 0.0;
 
     uiOverlay.showMenu();
 
@@ -319,25 +323,22 @@ class KangarooGame extends FlameGame
       score = (distanceTraveled / 25).round();
       uiOverlay.updateScore(score);
 
-      // Increase game speed gradually based on score (slower progression)
+      // Increase game speed gradually based on score
       if (score < 1000) {
-        // 250 to 450 over first 1000 points
-        gameSpeed = 250 + (score / 1000) * 200;
+        // 250 to 500 over first 1000 points
+        gameSpeed = 250 + (score / 1000) * 250;
       } else if (score < 1500) {
-        // 450 to 500 over next 500 points
-        gameSpeed = 450 + ((score - 1000) / 500) * 50;
+        // 500 to 600 over next 500 points
+        gameSpeed = 500 + ((score - 1000) / 500) * 100;
       } else if (score < 2000) {
-        // 500 to 550 over next 500 points
-        gameSpeed = 500 + ((score - 1500) / 500) * 50;
-      } else if (score < 2500) {
-        // 550 to 600 over next 500 points
-        gameSpeed = 550 + ((score - 2000) / 500) * 50;
-      } else if (score < 3500) {
-        // 600 to 700 over next 1000 points
-        gameSpeed = 600 + ((score - 2500) / 1000) * 100;
+        // 600 to 700 over next 500 points
+        gameSpeed = 600 + ((score - 1500) / 500) * 100;
+      } else if (score < 3000) {
+        // 700 to 750 over next 1000 points
+        gameSpeed = 700 + ((score - 2000) / 1000) * 50;
       } else {
-        // Cap at 700 after score 3500
-        gameSpeed = 700;
+        // Cap at 750 after score 3000
+        gameSpeed = 750;
       }
 
       // Update all moving components with new speed using cached lists
@@ -363,11 +364,13 @@ class KangarooGame extends FlameGame
       // Performance: Only process magnet effect if active
       if (isMagnetActive) {
         final kangarooPos = kangaroo.position;
+        // Pull coins to a position slightly ahead of the kangaroo
+        final targetPos = kangarooPos + Vector2(30, 0);
         for (final coin in _coins) {
           final distance = coin.position.distanceTo(kangarooPos);
-          if (distance < 200) {
-            final direction = (kangarooPos - coin.position).normalized();
-            coin.position += direction * 300 * dt;
+          if (distance < 250) {
+            final direction = (targetPos - coin.position).normalized();
+            coin.position += direction * 500 * dt;
           }
         }
       }
@@ -410,8 +413,18 @@ class KangarooGame extends FlameGame
         if (gameState == GameState.playing) {
           // Choose obstacle type based on score
           ObstacleType obstacleType;
-          if (score >= 1000) {
-            // After score 1000: rock, cactus, croc, or emu (no more logs)
+          if (score >= 1500) {
+            // After score 1500: cactus, croc, emu, or camel (no more rocks)
+            final availableTypes = [
+              ObstacleType.cactus,
+              ObstacleType.croc,
+              ObstacleType.emu,
+              ObstacleType.camel
+            ];
+            obstacleType =
+                availableTypes[random.nextInt(availableTypes.length)];
+          } else if (score >= 1000) {
+            // Score 1000-1499: rock, cactus, croc, or emu (no more logs)
             final availableTypes = [
               ObstacleType.rock,
               ObstacleType.cactus,

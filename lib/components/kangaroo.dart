@@ -17,7 +17,7 @@ class Kangaroo extends SpriteAnimationComponent
   static const double jumpSpeed = -600.0;
   static const double doubleJumpSpeed = -450.0;
   static const double gravity = 1200.0;
-  static const double groundY = 400.0;
+  static const double groundY = 403.0;
 
   double verticalSpeed = 0.0;
   bool isOnGround = true;
@@ -153,8 +153,8 @@ class Kangaroo extends SpriteAnimationComponent
     // Start with running animation (since game starts in playing state)
     animation = runningAnimation;
 
-    // Add collision detection (scaled up proportionally) - made visible for testing
-    final hitbox = RectangleHitbox(size: Vector2(30, 75.5), position: Vector2(50, 45));
+    // Add collision detection (made slightly less wide)
+    final hitbox = RectangleHitbox(size: Vector2(25, 75.5), position: Vector2(52.5, 45));
     
     // Make the collision box visible for testing
     hitbox.paint = Paint()

@@ -346,6 +346,10 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
           gameOverMessageText = 'Ouch! Jumped into a cactus! 🌵\nThose spines are sharp!';
           emojiIcon = '🌵';
           break;
+        case ObstacleType.camel:
+          gameOverMessageText = 'You got bumped by a camel! 🐪\nCamels can be grumpy!';
+          emojiIcon = '🐪';
+          break;
       }
     }
     

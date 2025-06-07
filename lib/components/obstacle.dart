@@ -3,10 +3,11 @@ import 'dart:math';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
+import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
-enum ObstacleType { rock, cactus, log, croc, emu }
+enum ObstacleType { rock, cactus, log, croc, emu, camel }
 
 class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
   double gameSpeed = 250.0;
@@ -43,6 +44,11 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
         final scale = 0.8 + random.nextDouble() * 0.2; // 0.8 to 1.0
         size = Vector2(72 * scale, 108 * scale);
         break;
+      case ObstacleType.camel:
+        // Base: 120x140, Scale: 80%-100%
+        final scale = 0.8 + random.nextDouble() * 0.2; // 0.8 to 1.0
+        size = Vector2(120 * scale, 140 * scale);
+        break;
     }
   }
   Future<void> _createCroc() async {
@@ -66,6 +72,17 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
       position: Vector2.zero(), // Position relative to obstacle
     ));
   }
+
+  Future<void> _createCamel() async {
+    // Load and add the camel image sprite
+    final camelSprite = await game.loadSprite('camel.png');
+    
+    add(SpriteComponent(
+      sprite: camelSprite,
+      size: size, // Use the obstacle's size (120x140)
+      position: Vector2.zero(), // Position relative to obstacle
+    ));
+  }
   
   
   @override
@@ -77,6 +94,8 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
       position = Vector2(game.size.x + 100, groundY - size.y + 15);
     } else if (type == ObstacleType.log) {
       position = Vector2(game.size.x + 100, groundY - size.y + 10);
+    } else if (type == ObstacleType.camel) {
+      position = Vector2(game.size.x + 100, groundY - size.y + 5);
     } else {
       position = Vector2(game.size.x + 100, groundY - size.y);
     }
@@ -98,10 +117,49 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
       case ObstacleType.emu:
         await _createEmu();
         break;
+      case ObstacleType.camel:
+        await _createCamel();
+        break;
     }
     
-    // Add collision detection
-    add(RectangleHitbox(size: size * 0.8, position: size * 0.1));
+    // Add collision detection with custom sizes per obstacle type
+    Vector2 hitboxSize;
+    Vector2 hitboxPosition;
+    
+    switch (type) {
+      case ObstacleType.cactus:
+        // Cactus: less wide (60% width, 80% height)
+        hitboxSize = Vector2(size.x * 0.6, size.y * 0.8);
+        hitboxPosition = Vector2(size.x * 0.2, size.y * 0.1);
+        break;
+      case ObstacleType.log:
+        // Log: less high (80% width, 60% height)
+        hitboxSize = Vector2(size.x * 0.8, size.y * 0.6);
+        hitboxPosition = Vector2(size.x * 0.1, size.y * 0.2);
+        break;
+      case ObstacleType.rock:
+        // Rock: slightly less wide (70% width, 80% height)
+        hitboxSize = Vector2(size.x * 0.7, size.y * 0.8);
+        hitboxPosition = Vector2(size.x * 0.15, size.y * 0.1);
+        break;
+      default:
+        // Other obstacles: normal size (80% of original size)
+        hitboxSize = size * 0.8;
+        hitboxPosition = size * 0.1;
+        break;
+    }
+    
+    add(RectangleHitbox(size: hitboxSize, position: hitboxPosition));
+    
+    // Debug: Add visual collision box
+    add(RectangleComponent(
+      size: hitboxSize,
+      position: hitboxPosition,
+      paint: Paint()
+        ..color = Colors.red.withValues(alpha: 0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    ));
   }
   
   Future<void> _createRock() async {
