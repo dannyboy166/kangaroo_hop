@@ -1,15 +1,17 @@
 import 'package:flame/components.dart';
 import 'package:flame/effects.dart';
+import 'package:flame/events.dart';
 import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 import 'obstacle.dart';
 import 'power_up.dart';
 
-class UiOverlay extends Component with HasGameReference<KangarooGame> {
+class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   late TextComponent scoreText;
   late TextComponent highScoreText;
   late TextComponent coinText;
+  late TextComponent totalCoinText;
   late TextComponent menuTitle;
   late TextComponent menuSubtitle;
   late RectangleComponent gameOverPanel;
@@ -20,6 +22,21 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   late TextComponent gameOverCoins;
   late TextComponent restartText;
   late TextComponent powerUpNotification;
+  
+  // Store buttons
+  late RectangleComponent menuStoreButton;
+  late TextComponent menuStoreButtonText;
+  late RectangleComponent gameOverStoreButton;
+  late TextComponent gameOverStoreButtonText;
+  
+  // Power-up display in game
+  late RectangleComponent powerUpPanel;
+  late TextComponent doubleJumpCountText;
+  late TextComponent shieldCountText;
+  late TextComponent magnetCountText;
+  late RectangleComponent doubleJumpButton;
+  late RectangleComponent shieldButton;
+  late RectangleComponent magnetButton;
 
   // Performance: Cache text renderers
   static final _scoreRenderer = TextPaint(
@@ -111,6 +128,9 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    
+    // Set size to cover the entire game area for tap detection
+    size = game.size;
 
     // Score display
     scoreText = TextComponent(
@@ -131,6 +151,19 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       text: '\$ 0', // Using dollar sign like in your coin component
       position: Vector2(20, 90), // Positioned under the high score
       textRenderer: _coinRenderer,
+    );
+
+    // Total coins display (persistent across games)
+    totalCoinText = TextComponent(
+      text: 'Total: ${game.storeManager.totalCoins} \$',
+      position: Vector2(20, 125),
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.orange,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
 
     // Menu title
@@ -155,7 +188,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       position: game.size / 2,
       anchor: Anchor.center,
       paint: Paint()
-        ..color = Colors.black.withOpacity(0.85)
+        ..color = Colors.black.withValues(alpha: 0.85)
         ..style = PaintingStyle.fill,
     );
 
@@ -221,6 +254,28 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       ),
     );
 
+    // Game over store button
+    gameOverStoreButton = RectangleComponent(
+      size: Vector2(180, 40),
+      position: Vector2(250, 250),
+      anchor: Anchor.center,
+      paint: Paint()..color = Colors.brown.shade700,
+    );
+    
+    gameOverStoreButtonText = TextComponent(
+      text: '🏪 STORE',
+      position: Vector2(90, 20),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    gameOverStoreButton.add(gameOverStoreButtonText);
+
     // Restart text
     restartText = TextComponent(
       text: 'Tap to Play Again',
@@ -241,6 +296,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
     gameOverPanel.add(gameOverScore);
     gameOverPanel.add(gameOverHighScore);
     gameOverPanel.add(gameOverCoins);
+    gameOverPanel.add(gameOverStoreButton);
     gameOverPanel.add(restartText);
 
     // Power-up notification
@@ -250,11 +306,189 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _powerUpRenderer,
     );
+    
+    // Menu store button
+    menuStoreButton = RectangleComponent(
+      size: Vector2(200, 50),
+      position: game.size / 2 + Vector2(0, 100),
+      anchor: Anchor.center,
+      paint: Paint()..color = Colors.brown.shade700,
+    );
+    
+    menuStoreButtonText = TextComponent(
+      text: '🏪 STORE',
+      position: Vector2(100, 25),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    menuStoreButton.add(menuStoreButtonText);
+    
+    // Power-up panel for in-game display
+    powerUpPanel = RectangleComponent(
+      size: Vector2(160, 120),
+      position: Vector2(game.size.x - 180, game.size.y - 140),
+      paint: Paint()
+        ..color = Colors.black.withValues(alpha: 0.6)
+        ..style = PaintingStyle.fill,
+    );
+    
+    final powerUpBorder = RectangleComponent(
+      size: Vector2(160, 120),
+      position: Vector2.zero(),
+      paint: Paint()
+        ..color = Colors.orange
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    powerUpPanel.add(powerUpBorder);
+    
+    // Power-up buttons and counts
+    _createPowerUpButtons();
+  }
+  
+  void _createPowerUpButtons() {
+    // Double Jump button
+    doubleJumpButton = RectangleComponent(
+      size: Vector2(45, 30),
+      position: Vector2(10, 15),
+      paint: Paint()..color = Colors.purple.shade700,
+    );
+    doubleJumpButton.add(TextComponent(
+      text: '⬆⬆',
+      position: Vector2(22.5, 15),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ));
+    powerUpPanel.add(doubleJumpButton);
+    
+    doubleJumpCountText = TextComponent(
+      text: '0',
+      position: Vector2(32.5, 50),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    powerUpPanel.add(doubleJumpCountText);
+    
+    // Shield button
+    shieldButton = RectangleComponent(
+      size: Vector2(45, 30),
+      position: Vector2(60, 15),
+      paint: Paint()..color = Colors.blue.shade700,
+    );
+    shieldButton.add(TextComponent(
+      text: '🛡️',
+      position: Vector2(22.5, 15),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+        ),
+      ),
+    ));
+    powerUpPanel.add(shieldButton);
+    
+    shieldCountText = TextComponent(
+      text: '0',
+      position: Vector2(82.5, 50),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    powerUpPanel.add(shieldCountText);
+    
+    // Magnet button
+    magnetButton = RectangleComponent(
+      size: Vector2(45, 30),
+      position: Vector2(110, 15),
+      paint: Paint()..color = Colors.red.shade700,
+    );
+    magnetButton.add(TextComponent(
+      text: '🧲',
+      position: Vector2(22.5, 15),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+        ),
+      ),
+    ));
+    powerUpPanel.add(magnetButton);
+    
+    magnetCountText = TextComponent(
+      text: '0',
+      position: Vector2(132.5, 50),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+    powerUpPanel.add(magnetCountText);
+    
+    // Instructions
+    powerUpPanel.add(TextComponent(
+      text: 'Tap to use',
+      position: Vector2(80, 80),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 12,
+        ),
+      ),
+    ));
+    
+    // Add key bindings
+    powerUpPanel.add(TextComponent(
+      text: '1   2   3',
+      position: Vector2(80, 95),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.orange,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ));
   }
 
   void showMenu() {
     add(menuTitle);
     add(menuSubtitle);
+    add(menuStoreButton);
+    add(totalCoinText);
+    
+    // Update total coins display
+    totalCoinText.text = 'Total: ${game.storeManager.totalCoins} \$';
 
     // Animate menu
     menuTitle.add(
@@ -284,15 +518,21 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   void hideMenu() {
     menuTitle.removeFromParent();
     menuSubtitle.removeFromParent();
+    menuStoreButton.removeFromParent();
+    totalCoinText.removeFromParent();
   }
 
   void showGameUI() {
     add(scoreText);
     add(highScoreText);
     add(coinText);
+    add(totalCoinText);
+    add(powerUpPanel);
 
     // Make sure coin display starts with 0
     updateCoins(0);
+    updateTotalCoins();
+    updatePowerUpCounts();
   }
 
   void updateScore(int score) {
@@ -446,5 +686,71 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
         },
       ),
     );
+  }
+  
+  void updateTotalCoins() {
+    totalCoinText.text = 'Total: ${game.storeManager.totalCoins} \$';
+  }
+  
+  void updatePowerUpCounts() {
+    doubleJumpCountText.text = '${game.storeManager.doubleJumpCount}';
+    shieldCountText.text = '${game.storeManager.shieldCount}';
+    magnetCountText.text = '${game.storeManager.magnetCount}';
+  }
+  
+  void hideGameUI() {
+    scoreText.removeFromParent();
+    highScoreText.removeFromParent();
+    coinText.removeFromParent();
+    totalCoinText.removeFromParent();
+    powerUpPanel.removeFromParent();
+  }
+  
+  bool onTapDown(TapDownInfo info) {
+    final worldPosition = info.eventPosition.global;
+    
+    // Check menu store button
+    if (menuStoreButton.parent != null && 
+        menuStoreButton.containsLocalPoint(worldPosition - menuStoreButton.absolutePosition)) {
+      game.showStore();
+      return true;
+    }
+    
+    // Check game over store button
+    if (gameOverStoreButton.parent != null && 
+        gameOverPanel.parent != null &&
+        gameOverStoreButton.containsLocalPoint(worldPosition - gameOverStoreButton.absolutePosition - gameOverPanel.absolutePosition)) {
+      game.showStore();
+      return true;
+    }
+    
+    // Check power-up buttons (only during gameplay)
+    if (game.gameState == GameState.playing && powerUpPanel.parent != null) {
+      final panelPos = powerUpPanel.absolutePosition;
+      
+      if (doubleJumpButton.containsLocalPoint(worldPosition - panelPos - doubleJumpButton.position)) {
+        _usePowerUp(PowerUpType.doubleJump);
+        return true;
+      }
+      
+      if (shieldButton.containsLocalPoint(worldPosition - panelPos - shieldButton.position)) {
+        _usePowerUp(PowerUpType.shield);
+        return true;
+      }
+      
+      if (magnetButton.containsLocalPoint(worldPosition - panelPos - magnetButton.position)) {
+        _usePowerUp(PowerUpType.magnet);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  void _usePowerUp(PowerUpType type) {
+    if (game.storeManager.usePowerUp(type)) {
+      game.activatePowerUp(type);
+      updatePowerUpCounts();
+    }
   }
 }

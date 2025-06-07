@@ -17,7 +17,9 @@ import '../components/kangaroo.dart';
 import '../components/obstacle.dart';
 import '../components/power_up.dart';
 import '../components/ui_overlay.dart';
+import '../components/store_screen.dart';
 import 'audio_manager.dart';
+import 'store_manager.dart';
 
 enum GameState { menu, playing, gameOver }
 
@@ -27,6 +29,8 @@ class KangarooGame extends FlameGame
   late Background background;
   late Ground ground;
   late UiOverlay uiOverlay;
+  late StoreManager storeManager;
+  StoreScreen? storeScreen;
 
   GameState gameState = GameState.menu;
   int score = 0;
@@ -82,6 +86,10 @@ class KangarooGame extends FlameGame
 
     // Set up camera to match screen size
     camera.viewfinder.visibleGameSize = size;
+
+    // Initialize store manager
+    storeManager = StoreManager();
+    await storeManager.loadData();
 
     // Load saved data
     await loadSavedData();
@@ -156,6 +164,19 @@ class KangarooGame extends FlameGame
       handleJumpInput();
     }
 
+    // Check for power-up keys during gameplay
+    if (gameState == GameState.playing) {
+      if (keysPressed.contains(LogicalKeyboardKey.digit1)) {
+        _tryUsePowerUp(PowerUpType.doubleJump);
+      }
+      if (keysPressed.contains(LogicalKeyboardKey.digit2)) {
+        _tryUsePowerUp(PowerUpType.shield);
+      }
+      if (keysPressed.contains(LogicalKeyboardKey.digit3)) {
+        _tryUsePowerUp(PowerUpType.magnet);
+      }
+    }
+
     wasJumpPressed = isJumpPressed;
     return KeyEventResult.handled;
   }
@@ -204,6 +225,9 @@ class KangarooGame extends FlameGame
 
     // Update high score display in menu
     uiOverlay.highScoreText.text = 'Best: $highScore';
+    
+    // Update total coins display
+    uiOverlay.updateTotalCoins();
   }
 
   void startGame() {
@@ -275,6 +299,7 @@ class KangarooGame extends FlameGame
       highScore = score;
     }
     totalCoins += coins;
+    storeManager.addCoins(coins);
     saveData();
 
     // Show game over with particle effects
@@ -310,6 +335,17 @@ class KangarooGame extends FlameGame
 
   @override
   bool onTapDown(TapDownInfo info) {
+    // Check if store screen is active
+    if (storeScreen != null) {
+      return storeScreen!.onTapDown(info);
+    }
+    
+    // Check UI overlay taps
+    if (uiOverlay.onTapDown(info)) {
+      return true;
+    }
+    
+    // Default jump input
     handleJumpInput();
     return true;
   }
@@ -698,5 +734,26 @@ class KangarooGame extends FlameGame
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('kangaroo_hop_high_score', highScore);
     await prefs.setInt('kangaroo_hop_total_coins', totalCoins);
+  }
+  
+  void showStore() {
+    if (storeScreen == null) {
+      storeScreen = StoreScreen();
+      add(storeScreen!);
+    }
+  }
+  
+  void hideStore() {
+    if (storeScreen != null) {
+      storeScreen!.removeFromParent();
+      storeScreen = null;
+    }
+  }
+  
+  void _tryUsePowerUp(PowerUpType type) {
+    if (storeManager.usePowerUp(type)) {
+      activatePowerUp(type);
+      uiOverlay.updatePowerUpCounts();
+    }
   }
 }
