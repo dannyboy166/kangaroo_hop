@@ -369,7 +369,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     ));
 
     gameOverStoreButtonText = TextComponent(
-      text: '🛒 STORE',
+      text: 'STORE',
       position: Vector2(110, 25),
       anchor: Anchor.center,
       textRenderer: TextPaint(

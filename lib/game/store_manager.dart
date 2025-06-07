@@ -37,17 +37,30 @@ class StoreManager {
     await prefs.setInt(_magnetCountKey, magnetCount);
   }
   
-  bool canPurchase(PowerUpType type) {
+  bool canPurchase(PowerUpType type, [int sessionCoins = 0]) {
     final price = getPowerUpPrice(type);
     final currentCount = getPowerUpCount(type);
-    return totalCoins >= price && currentCount < maxItemCount;
+    final availableCoins = totalCoins + sessionCoins;
+    return availableCoins >= price && currentCount < maxItemCount;
   }
   
-  bool purchasePowerUp(PowerUpType type) {
-    if (!canPurchase(type)) return false;
+  bool purchasePowerUpWithSessionCoins(PowerUpType type, int sessionCoins, Function(int) onSessionCoinsDeducted) {
+    if (!canPurchase(type, sessionCoins)) return false;
     
     final price = getPowerUpPrice(type);
-    totalCoins -= price;
+    
+    // Deduct from session coins first, then from total coins
+    int remainingPrice = price;
+    
+    if (sessionCoins > 0) {
+      final usedSessionCoins = remainingPrice > sessionCoins ? sessionCoins : remainingPrice;
+      onSessionCoinsDeducted(usedSessionCoins); // Tell caller to deduct session coins
+      remainingPrice -= usedSessionCoins;
+    }
+    
+    if (remainingPrice > 0) {
+      totalCoins -= remainingPrice;
+    }
     
     switch (type) {
       case PowerUpType.doubleJump:

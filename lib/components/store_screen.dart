@@ -206,6 +206,9 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   }
 
   void updateCoinDisplay() {
+    // Check if components are initialized before updating
+    if (!isLoaded) return;
+    
     coinText.text = '${game.storeManager.totalCoins + game.sessionCoins}';
 
     // Update all store items
@@ -437,7 +440,7 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
     countText.text =
         'Owned: ${game.storeManager.getPowerUpCount(powerUpType)}/3';
 
-    final canPurchase = game.storeManager.canPurchase(powerUpType);
+    final canPurchase = game.storeManager.canPurchase(powerUpType, game.sessionCoins);
     final maxReached = game.storeManager.getPowerUpCount(powerUpType) >= 3;
 
     if (maxReached) {
@@ -464,7 +467,15 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
     );
 
     if (buttonBounds.contains(itemLocalPoint.toOffset())) {
-      if (game.storeManager.purchasePowerUp(powerUpType)) {
+      final success = game.storeManager.purchasePowerUpWithSessionCoins(
+        powerUpType, 
+        game.sessionCoins, 
+        (int usedSessionCoins) {
+          game.sessionCoins -= usedSessionCoins;
+        }
+      );
+      
+      if (success) {
         // Simple purchase feedback - just a quick scale
         buyButton.add(
           ScaleEffect.to(

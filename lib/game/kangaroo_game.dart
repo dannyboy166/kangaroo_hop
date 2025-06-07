@@ -40,7 +40,7 @@ class KangarooGame extends FlameGame
   double baseSpeed = 250.0;
   double speedMultiplier = 1.0;
   bool hasDoubleJump = false;
-  bool hasShield = false;
+  // Shield system is now handled in kangaroo component
   bool isMagnetActive = false;
 
   // For distance-based scoring
@@ -239,7 +239,6 @@ class KangarooGame extends FlameGame
     gameSpeed = baseSpeed;
     speedMultiplier = 1.0;
     hasDoubleJump = false;
-    hasShield = false;
     isMagnetActive = false;
     lastWasGap = false;
 
@@ -366,6 +365,8 @@ class KangarooGame extends FlameGame
       add(storeScreen!);
       print('Store screen added with priority 2000');
     }
+    // Update store display to show current coin balance and power-up counts
+    storeScreen!.updateCoinDisplay();
   }
 
   void hideStore() {
@@ -622,7 +623,7 @@ class KangarooGame extends FlameGame
   }
 
   void collectCoin() {
-    sessionCoins += 5; // Each coin is worth 5! (but only for this session)
+    sessionCoins += 20; // Each coin is worth 5! (but only for this session)
 
     // Update UI to show total coins
     uiOverlay.updateCoins();
@@ -669,11 +670,10 @@ class KangarooGame extends FlameGame
         break;
       case PowerUpType.shield:
         AudioManager().playShieldActivate();
-        hasShield = true;
-        kangaroo.activateShield();
+        kangaroo.addShield();
+        // Each shield lasts 8 seconds independently
         Future.delayed(const Duration(seconds: 8), () {
-          hasShield = false;
-          kangaroo.deactivateShield();
+          kangaroo.removeOneShield();
         });
         break;
       case PowerUpType.magnet:
@@ -692,9 +692,8 @@ class KangarooGame extends FlameGame
 
   void onObstacleCollision(ObstacleType obstacleType) {
     if (gameState == GameState.playing) {
-      if (hasShield) {
-        hasShield = false;
-        kangaroo.deactivateShield();
+      if (kangaroo.hasAnyShield) {
+        kangaroo.removeOneShield();
         // Play collision sound for shield break
         AudioManager().playCollision();
         // Add shield break effect

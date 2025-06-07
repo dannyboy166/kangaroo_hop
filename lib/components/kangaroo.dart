@@ -24,10 +24,10 @@ class Kangaroo extends SpriteAnimationComponent
   bool isJumping = false;
   bool hasDoubleJump = false;
   bool hasUsedDoubleJump = false;
-  bool isShielded = false;
+  int shieldCount = 0;
   int jumpCount = 0;
 
-  CircleComponent? shieldVisual;
+  List<CircleComponent> shieldVisuals = [];
   PositionComponent? doubleJumpIndicator;
   PositionComponent? magnetIndicator;
 
@@ -269,44 +269,66 @@ class Kangaroo extends SpriteAnimationComponent
       animation = idleAnimation;
     }
 
-    if (isShielded) {
-      deactivateShield();
-    }
+    removeAllShields();
 
     removeDoubleJumpIndicator();
     removeMagnetIndicator();
   }
 
-  void activateShield() {
-    isShielded = true;
-    shieldVisual = CircleComponent(
-      radius: 60,
-      position: Vector2(70, 85), // Moved closer to kangaroo center (was 60, 60)
+  void addShield() {
+    shieldCount++;
+    
+    // Create a new shield ring - each shield gets progressively larger
+    final shieldRadius = 60.0 + (shieldVisuals.length * 15.0);
+    final alpha = 0.4 - (shieldVisuals.length * 0.05); // Each ring slightly more transparent
+    
+    final newShield = CircleComponent(
+      radius: shieldRadius,
+      position: Vector2(70, 85),
       anchor: Anchor.center,
       paint: Paint()
-        ..color = Colors.blue.withValues(alpha: 0.3)
+        ..color = Colors.blue.withValues(alpha: alpha.clamp(0.1, 0.4))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0,
     );
-    add(shieldVisual!);
-
-    shieldVisual!.add(
+    
+    // Add pulsing animation
+    newShield.add(
       ScaleEffect.to(
         Vector2.all(1.1),
         EffectController(
-          duration: 0.5,
-          reverseDuration: 0.5,
+          duration: 0.5 + (shieldVisuals.length * 0.1), // Different timing for each ring
+          reverseDuration: 0.5 + (shieldVisuals.length * 0.1),
           infinite: true,
         ),
       ),
     );
+    
+    shieldVisuals.add(newShield);
+    add(newShield);
   }
 
-  void deactivateShield() {
-    isShielded = false;
-    shieldVisual?.removeFromParent();
-    shieldVisual = null;
+  void removeOneShield() {
+    if (shieldCount > 0) {
+      shieldCount--;
+      
+      // Remove the outermost (latest) shield
+      if (shieldVisuals.isNotEmpty) {
+        final outerShield = shieldVisuals.removeLast();
+        outerShield.removeFromParent();
+      }
+    }
   }
+
+  void removeAllShields() {
+    shieldCount = 0;
+    for (final shield in shieldVisuals) {
+      shield.removeFromParent();
+    }
+    shieldVisuals.clear();
+  }
+
+  bool get hasAnyShield => shieldCount > 0;
 
   void activateDoubleJumpIndicator() {
     if (doubleJumpIndicator != null) return;
