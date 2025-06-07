@@ -126,10 +126,10 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       textRenderer: _highScoreRenderer,
     );
 
-    // Coin display
+    // Coin display - MOVED to top left under the high score
     coinText = TextComponent(
-      text: '🪙 0',
-      position: Vector2(game.size.x - 120, 20),
+      text: '\$ 0', // Using dollar sign like in your coin component
+      position: Vector2(20, 90), // Positioned under the high score
       textRenderer: _coinRenderer,
     );
 
@@ -300,7 +300,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
   }
 
   void updateCoins(int coins) {
-    coinText.text = '🪙 $coins'; // Always show the coin symbol with the number
+    coinText.text = '\$ $coins'; // Using dollar sign symbol like in your coin component
 
     // Performance: Skip pulse animation at high speeds
     if (game.shouldReduceEffects) return;
@@ -377,7 +377,7 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
       gameOverHighScore.text = 'Best: $highScore';
     }
 
-    gameOverCoins.text = 'Coins Earned: $coins 🪙';
+    gameOverCoins.text = 'Coins Earned: $coins \$'; // Using dollar sign at the end
 
     add(gameOverPanel);
 
