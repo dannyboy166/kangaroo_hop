@@ -292,21 +292,34 @@ class KangarooGame extends FlameGame
     coinTimer.removeFromParent();
     powerUpTimer.removeFromParent();
 
-    // Update high score and add session coins to total
+    // Update high score
     if (score > highScore) {
       highScore = score;
     }
 
-    // CRITICAL FIX: Add session coins to total and reset session coins
+    // DEBUG: Log the original sessionCoins value
+    print('DEBUG gameOver(): Original sessionCoins = $sessionCoins');
+
+    // CRITICAL FIX: Store the original sessionCoins value before modifying it
+    final coinsEarnedThisSession = sessionCoins;
+    print(
+        'DEBUG gameOver(): Stored coinsEarnedThisSession = $coinsEarnedThisSession');
+
+    // Add session coins to total and reset session coins
     storeManager.addCoins(sessionCoins);
     sessionCoins = 0; // Reset session coins after adding to total
+    print('DEBUG gameOver(): After reset, sessionCoins = $sessionCoins');
 
     saveData();
 
     // Show game over with particle effects
     addGameOverParticles();
+
+    // FIXED: Pass the original coins earned value, not the reset sessionCoins
+    print(
+        'DEBUG gameOver(): Calling showGameOver with coinsEarnedThisSession = $coinsEarnedThisSession');
     uiOverlay.showGameOver(
-        score, highScore, sessionCoins, obstacleType); // This will now be 0
+        score, highScore, coinsEarnedThisSession, obstacleType);
 
     // Add delay before allowing restart
     Future.delayed(const Duration(seconds: 1), () {
@@ -365,8 +378,8 @@ class KangarooGame extends FlameGame
   void showStore() {
     print('showStore() called');
 
-    // CRITICAL: Add session coins to total before showing store
-    // This ensures the store shows the most up-to-date coin count
+// CRITICAL: Add session coins to total before showing store
+// This ensures the store shows the most up-to-date coin count
     if (sessionCoins > 0) {
       storeManager.addCoins(sessionCoins);
       sessionCoins = 0;
