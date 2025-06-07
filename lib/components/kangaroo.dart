@@ -355,36 +355,25 @@ class Kangaroo extends SpriteAnimationComponent
     magnetIndicator =
         PositionComponent(position: Vector2(70, 85)); // Centered on kangaroo
 
-    if (game.shouldReduceEffects) {
-      // Just the blue circles for reduced effects
-      for (int i = 0; i < 3; i++) {
-        magnetIndicator!.add(CircleComponent(
-          radius: (18 + i * 9),
-          paint: Paint()
-            ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 6,
-        ));
-      }
-    } else {
-      // Full effect with rotating blue circles (no magnet emoji)
-      for (int i = 0; i < 3; i++) {
-        magnetIndicator!.add(CircleComponent(
-          radius: (18 + i * 9),
-          paint: Paint()
-            ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 6,
-        ));
-      }
-
-      magnetIndicator!.add(
-        RotateEffect.by(
-          2 * pi,
-          EffectController(duration: 2, infinite: true),
-        ),
-      );
+    // Always create the blue circles
+    for (int i = 0; i < 3; i++) {
+      magnetIndicator!.add(CircleComponent(
+        radius: (18 + i * 9),
+        paint: Paint()
+          ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 6,
+      ));
     }
+
+    // Always add rotation effect - the magnetic ring should always spin!
+    magnetIndicator!.add(
+      RotateEffect.by(
+        2 * pi,
+        EffectController(duration: 2, infinite: true),
+      ),
+    );
+    
     add(magnetIndicator!);
   }
 
