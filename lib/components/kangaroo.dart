@@ -43,11 +43,11 @@ class Kangaroo extends SpriteAnimationComponent
   Future<void> onLoad() async {
     await super.onLoad();
 
-    size = Vector2(120, 120); // 3x bigger (was 40x40)
+    size = Vector2(140, 140); // 3x bigger (was 40x40)
     position = Vector2(150, groundY - size.y);
 
-    // Load the sprite sheet (512x256 with 4x2 frames, each 128x128)
-    final spriteSheet = await game.images.load('kangaroo_animations.png');
+    // Load the NEW 12-frame sprite sheet (768x256 with 6x2 frames, each 128x128)
+    final spriteSheet = await game.images.load('kangaroos.png');
     
     // Create idle animation (just the first frame - for menu screen)
     idleAnimation = SpriteAnimation.fromFrameData(
@@ -60,101 +60,102 @@ class Kangaroo extends SpriteAnimationComponent
       ),
     );
 
-    // Create running animation (cycles through multiple frames for movement)
+    // Create AMAZING 12-frame running animation (all frames in sequence)
     runningAnimation = SpriteAnimation.fromFrameData(
       spriteSheet,
       SpriteAnimationData([
-        // Alternate between different poses to simulate running
+        // Top row - frames 1-6
         SpriteAnimationFrameData(
-          srcPosition: Vector2(0, 0), // Idle/upright
+          srcPosition: Vector2(0, 0), // Frame 1
           srcSize: Vector2(128, 128),
-          stepTime: 0.2,
+          stepTime: 0.08, // Fast for smooth animation
         ),
         SpriteAnimationFrameData(
-          srcPosition: Vector2(128, 0), // Slight crouch (like mid-stride)
+          srcPosition: Vector2(128, 0), // Frame 2
           srcSize: Vector2(128, 128),
-          stepTime: 0.2,
+          stepTime: 0.08,
         ),
         SpriteAnimationFrameData(
-          srcPosition: Vector2(0, 0), // Back to upright
+          srcPosition: Vector2(256, 0), // Frame 3
           srcSize: Vector2(128, 128),
-          stepTime: 0.2,
+          stepTime: 0.08,
         ),
         SpriteAnimationFrameData(
-          srcPosition: Vector2(384, 0), // Landing pose (like other foot)
+          srcPosition: Vector2(384, 0), // Frame 4
           srcSize: Vector2(128, 128),
-          stepTime: 0.2,
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(512, 0), // Frame 5
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(640, 0), // Frame 6
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        // Bottom row - frames 7-12
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(0, 128), // Frame 7
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(128, 128), // Frame 8
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(256, 128), // Frame 9
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(384, 128), // Frame 10
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(512, 128), // Frame 11
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
+        ),
+        SpriteAnimationFrameData(
+          srcPosition: Vector2(640, 128), // Frame 12
+          srcSize: Vector2(128, 128),
+          stepTime: 0.08,
         ),
       ]),
     );
 
-    // Create normal jump animation (top row: idle -> crouch -> jump -> landing)
+    // Create normal jump animation (use a good jumping frame - let's try frame 3)
     normalJumpAnimation = SpriteAnimation.fromFrameData(
       spriteSheet,
-      SpriteAnimationData([
-        // Frame 1: Idle (0, 0)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(0, 0),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.1, // Quick start
-        ),
-        // Frame 2: Crouch (128, 0)  
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(128, 0),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.1, // Quick crouch
-        ),
-        // Frame 3: Mid-jump (256, 0)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(256, 0),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.4, // Hold jump pose longer
-        ),
-        // Frame 4: Landing/idle (384, 0)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(384, 0),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.2, // Landing
-        ),
-      ]),
+      SpriteAnimationData.sequenced(
+        amount: 1,
+        stepTime: 1.0,
+        textureSize: Vector2(128, 128),
+        texturePosition: Vector2(256, 0), // Frame 3 from top row
+      ),
     );
 
-    // Create high jump animation (bottom row: idle -> deep crouch -> high jump -> landing)
+    // Create high jump animation (use frame 9 from bottom row for variety)
     highJumpAnimation = SpriteAnimation.fromFrameData(
       spriteSheet,
-      SpriteAnimationData([
-        // Frame 1: Idle (0, 128)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(0, 128),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.1,
-        ),
-        // Frame 2: Deep crouch (128, 128)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(128, 128),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.15, // Slightly longer crouch for high jump
-        ),
-        // Frame 3: Extended high jump (256, 128)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(256, 128),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.5, // Hold high jump pose longer
-        ),
-        // Frame 4: Landing (384, 128)
-        SpriteAnimationFrameData(
-          srcPosition: Vector2(384, 128),
-          srcSize: Vector2(128, 128),
-          stepTime: 0.2,
-        ),
-      ]),
+      SpriteAnimationData.sequenced(
+        amount: 1,
+        stepTime: 1.0,
+        textureSize: Vector2(128, 128),
+        texturePosition: Vector2(256, 128), // Frame 9 from bottom row
+      ),
     );
 
     // Start with running animation (since game starts in playing state)
     animation = runningAnimation;
 
     // Add collision detection (made slightly less wide)
-    final hitbox = RectangleHitbox(size: Vector2(25, 75.5), position: Vector2(52.5, 45));
+    final hitbox = RectangleHitbox(size: Vector2(60, 40), position: Vector2(55, 80));
     
     // Make the collision box visible for testing
     hitbox.paint = Paint()
