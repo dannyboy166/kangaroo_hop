@@ -1,11 +1,12 @@
 
+import 'dart:math';
+
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
-import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
 
-enum ObstacleType { rock, cactus, log, croc }
+enum ObstacleType { rock, cactus, log, croc, emu }
 
 class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, CollisionCallbacks {
   double gameSpeed = 250.0;
@@ -13,19 +14,34 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
   final ObstacleType type;
   
   Obstacle({required this.type}) : super() {
-    // Set size based on type
+    final random = Random();
+    
+    // Set base size and apply random scaling based on type
     switch (type) {
       case ObstacleType.rock:
-        size = Vector2(50, 60);
+        // Base: 75x90, Scale: 40%-120%
+        final scale = 0.4 + random.nextDouble() * 0.8; // 0.4 to 1.2
+        size = Vector2(75 * scale, 90 * scale);
         break;
       case ObstacleType.cactus:
-        size = Vector2(60, 100); // Made bigger (was 40x80)
+        // Base: 60x100, Scale: 80%-105%
+        final scale = 0.8 + random.nextDouble() * 0.25; // 0.8 to 1.05
+        size = Vector2(60 * scale, 100 * scale);
         break;
       case ObstacleType.log:
-        size = Vector2(80, 40);
+        // Base: 136x68, Scale: 70%-110%
+        final scale = 0.7 + random.nextDouble() * 0.4; // 0.7 to 1.1
+        size = Vector2(136 * scale, 68 * scale);
         break;
       case ObstacleType.croc:
-        size = Vector2(120, 60); // Made bigger (was 100x50)
+        // Base: 144x72, Scale: 80%-100%
+        final scale = 0.8 + random.nextDouble() * 0.2; // 0.8 to 1.0
+        size = Vector2(144 * scale, 72 * scale);
+        break;
+      case ObstacleType.emu:
+        // Base: 72x108, Scale: 80%-100%
+        final scale = 0.8 + random.nextDouble() * 0.2; // 0.8 to 1.0
+        size = Vector2(72 * scale, 108 * scale);
         break;
     }
   }
@@ -39,6 +55,17 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
       position: Vector2.zero(), // Position relative to obstacle
     ));
   }
+
+  Future<void> _createEmu() async {
+    // Load and add the emu image sprite
+    final emuSprite = await game.loadSprite('emu.png');
+    
+    add(SpriteComponent(
+      sprite: emuSprite,
+      size: size, // Use the obstacle's size (80x120)
+      position: Vector2.zero(), // Position relative to obstacle
+    ));
+  }
   
   
   @override
@@ -46,21 +73,30 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     await super.onLoad();
     
     // Start position off screen
-    position = Vector2(game.size.x + 100, groundY - size.y);
+    if (type == ObstacleType.croc) {
+      position = Vector2(game.size.x + 100, groundY - size.y + 15);
+    } else if (type == ObstacleType.log) {
+      position = Vector2(game.size.x + 100, groundY - size.y + 10);
+    } else {
+      position = Vector2(game.size.x + 100, groundY - size.y);
+    }
     
     // Create obstacle based on type
     switch (type) {
       case ObstacleType.rock:
-        _createRock();
+        await _createRock();
         break;
       case ObstacleType.cactus:
         await _createCactus();
         break;
       case ObstacleType.log:
-        _createLog();
+        await _createLog();
         break;
       case ObstacleType.croc:
         await _createCroc();
+        break;
+      case ObstacleType.emu:
+        await _createEmu();
         break;
     }
     
@@ -68,50 +104,14 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     add(RectangleHitbox(size: size * 0.8, position: size * 0.1));
   }
   
-  void _createRock() {
-    // Main rock body vertices
-    final vertices = [
-      Vector2(10, size.y),
-      Vector2(0, size.y * 0.6),
-      Vector2(5, size.y * 0.3),
-      Vector2(size.x * 0.3, 0),
-      Vector2(size.x * 0.7, size.y * 0.1),
-      Vector2(size.x * 0.9, size.y * 0.4),
-      Vector2(size.x, size.y * 0.7),
-      Vector2(size.x - 5, size.y),
-    ];
+  Future<void> _createRock() async {
+    // Load and add the rock image sprite
+    final rockSprite = await game.loadSprite('rock.png');
     
-    // Shadow layer (bottom-right)
-    final shadowVertices = vertices.map((v) => v + Vector2(3, 3)).toList();
-    add(PolygonComponent(
-      shadowVertices,
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
-    ));
-    
-    // Main rock body
-    add(PolygonComponent(
-      vertices,
-      paint: Paint()..color = const Color(0xFF696969),
-    ));
-    
-    // Highlight layer (top-left)
-    final highlightVertices = vertices.map((v) => v + Vector2(-1, -1)).toList();
-    add(PolygonComponent(
-      highlightVertices,
-      paint: Paint()..color = const Color(0xFF909090).withValues(alpha: 0.7),
-    ));
-    
-    // Add some texture
-    add(CircleComponent(
-      radius: 8,
-      position: Vector2(size.x * 0.3, size.y * 0.5),
-      paint: Paint()..color = const Color(0xFF808080),
-    ));
-    
-    add(CircleComponent(
-      radius: 5,
-      position: Vector2(size.x * 0.7, size.y * 0.6),
-      paint: Paint()..color = const Color(0xFF505050),
+    add(SpriteComponent(
+      sprite: rockSprite,
+      size: size, // Use the obstacle's size (50x60)
+      position: Vector2.zero(), // Position relative to obstacle
     ));
   }
   
@@ -126,54 +126,15 @@ class Obstacle extends PositionComponent with HasGameReference<KangarooGame>, Co
     ));
   }
   
-  void _createLog() {
-    // Shadow for log body
-    add(RectangleComponent(
-      size: Vector2(size.x, size.y),
-      position: Vector2(3, 3),
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.5),
-    ));
+  Future<void> _createLog() async {
+    // Load and add the log image sprite
+    final logSprite = await game.loadSprite('log.png');
     
-    // Main log body
-    add(RectangleComponent(
-      size: Vector2(size.x, size.y),
-      paint: Paint()..color = const Color(0xFF8B4513),
+    add(SpriteComponent(
+      sprite: logSprite,
+      size: size, // Use the obstacle's size (80x40)
+      position: Vector2.zero(), // Position relative to obstacle
     ));
-    
-    // Highlight for log body
-    add(RectangleComponent(
-      size: Vector2(size.x, size.y),
-      position: Vector2(-1, -1),
-      paint: Paint()..color = const Color(0xFFCD853F).withValues(alpha: 0.6),
-    ));
-    
-    // Wood rings
-    add(CircleComponent(
-      radius: 15,
-      position: Vector2(20, size.y / 2),
-      paint: Paint()
-        ..color = const Color(0xFF654321)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    ));
-    
-    add(CircleComponent(
-      radius: 10,
-      position: Vector2(20, size.y / 2),
-      paint: Paint()
-        ..color = const Color(0xFF654321)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    ));
-    
-    // Bark texture
-    for (int i = 0; i < 5; i++) {
-      add(RectangleComponent(
-        size: Vector2(3, size.y * 0.8),
-        position: Vector2(i * 15 + 10, size.y * 0.1),
-        paint: Paint()..color = const Color(0xFF654321),
-      ));
-    }
   }
   
   

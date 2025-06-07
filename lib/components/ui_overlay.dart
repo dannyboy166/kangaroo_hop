@@ -3,6 +3,7 @@ import 'package:flame/effects.dart';
 import 'package:flutter/material.dart';
 
 import '../game/kangaroo_game.dart';
+import 'obstacle.dart';
 import 'power_up.dart';
 
 class UiOverlay extends Component with HasGameReference<KangarooGame> {
@@ -266,8 +267,31 @@ class UiOverlay extends Component with HasGameReference<KangarooGame> {
     );
   }
   
-  void showGameOver(int score, int highScore, int coins) {
-    gameOverTitle.position = game.size / 2 - Vector2(0, 80);
+  void showGameOver(int score, int highScore, int coins, [ObstacleType? obstacleType]) {
+    // Set obstacle-specific game over message
+    String gameOverMessage = 'GAME OVER';
+    if (obstacleType != null) {
+      switch (obstacleType) {
+        case ObstacleType.croc:
+          gameOverMessage = 'You were caught by a crocodile!\nCrocs use a death roll to take down their prey.';
+          break;
+        case ObstacleType.emu:
+          gameOverMessage = 'You got run over by a charging emu!\nEmus can\'t fly, but they can run over 50km/h on land!';
+          break;
+        case ObstacleType.rock:
+          gameOverMessage = 'You tripped over a boulder!\nRocks don\'t move — but you sure did!';
+          break;
+        case ObstacleType.log:
+          gameOverMessage = 'You faceplanted into a log!\nLogs can hide snakes and lizards underneath.';
+          break;
+        case ObstacleType.cactus:
+          gameOverMessage = 'You jumped straight into a cactus! 🌵\nSome Aussie cacti are actually invasive weeds.';
+          break;
+      }
+    }
+    
+    gameOverTitle.text = gameOverMessage;
+    gameOverTitle.position = game.size / 2 - Vector2(0, 100);
     gameOverScore.position = game.size / 2 - Vector2(0, 20);
     gameOverScore.text = 'Score: $score';
     

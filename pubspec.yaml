@@ -67,6 +67,10 @@ flutter:
     - assets/images/kangaroo_animations.png
     - assets/images/cactus.png
     - assets/images/croc.png
+    - assets/images/rock.png
+    - assets/images/emu.png
+    - assets/images/log.png
+
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

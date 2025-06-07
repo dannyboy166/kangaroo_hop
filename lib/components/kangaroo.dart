@@ -14,7 +14,7 @@ import 'power_up.dart';
 
 class Kangaroo extends SpriteAnimationComponent
     with HasGameReference<KangarooGame>, CollisionCallbacks {
-  static const double jumpSpeed = -500.0;
+  static const double jumpSpeed = -600.0;
   static const double doubleJumpSpeed = -450.0;
   static const double gravity = 1200.0;
   static const double groundY = 400.0;
@@ -278,8 +278,8 @@ class Kangaroo extends SpriteAnimationComponent
   void activateShield() {
     isShielded = true;
     shieldVisual = CircleComponent(
-      radius: 40,
-      position: Vector2(20, 20), // Adjusted for center of 40x40 sprite
+      radius: 60,
+      position: Vector2(60, 60), // Centered on 120x120 kangaroo
       anchor: Anchor.center,
       paint: Paint()
         ..color = Colors.blue.withValues(alpha: 0.3)
@@ -478,7 +478,7 @@ class Kangaroo extends SpriteAnimationComponent
     super.onCollisionStart(intersectionPoints, other);
 
     if (other is Obstacle) {
-      game.onObstacleCollision();
+      game.onObstacleCollision(other.type);
       return true;
     } else if (other is Coin) {
       other.collect();

@@ -60,7 +60,7 @@ class KangarooGame extends FlameGame
   static const double minObstacleSpacing = 1.2;
   static const double maxObstacleSpacing = 2.5;
   static const double minGapSpacing = 0.1;
-  static const double maxGapSpacing = 3;
+  static const double maxGapSpacing = 2.5;
 
   bool lastWasGap = false;
 
@@ -229,7 +229,7 @@ class KangarooGame extends FlameGame
     startPowerUpSpawning();
   }
 
-  void gameOver() {
+  void gameOver([ObstacleType? obstacleType]) {
     if (gameOverTriggered) return;
 
     gameOverTriggered = true;
@@ -272,7 +272,7 @@ class KangarooGame extends FlameGame
 
     // Show game over with particle effects
     addGameOverParticles();
-    uiOverlay.showGameOver(score, highScore, coins);
+    uiOverlay.showGameOver(score, highScore, coins, obstacleType);
 
     // Add delay before allowing restart
     Future.delayed(const Duration(seconds: 1), () {
@@ -411,16 +411,27 @@ class KangarooGame extends FlameGame
           // Choose obstacle type based on score
           ObstacleType obstacleType;
           if (score >= 1000) {
-            // After score 1000: rock, cactus, or croc (no more logs)
+            // After score 1000: rock, cactus, croc, or emu (no more logs)
             final availableTypes = [
               ObstacleType.rock,
               ObstacleType.cactus,
-              ObstacleType.croc
+              ObstacleType.croc,
+              ObstacleType.emu
+            ];
+            obstacleType =
+                availableTypes[random.nextInt(availableTypes.length)];
+          } else if (score >= 500) {
+            // Score 500-999: rock, cactus, log, or emu (crocs not yet)
+            final availableTypes = [
+              ObstacleType.rock,
+              ObstacleType.cactus,
+              ObstacleType.log,
+              ObstacleType.emu
             ];
             obstacleType =
                 availableTypes[random.nextInt(availableTypes.length)];
           } else {
-            // Before score 1000: rock, cactus, or log (no crocs yet)
+            // Before score 500: rock, cactus, or log (no crocs or emus yet)
             final availableTypes = [
               ObstacleType.rock,
               ObstacleType.cactus,
@@ -569,7 +580,7 @@ class KangarooGame extends FlameGame
     uiOverlay.showPowerUpNotification(type);
   }
 
-  void onObstacleCollision() {
+  void onObstacleCollision(ObstacleType obstacleType) {
     if (gameState == GameState.playing) {
       if (hasShield) {
         hasShield = false;
@@ -581,7 +592,7 @@ class KangarooGame extends FlameGame
       } else {
         // Play collision sound before game over
         AudioManager().playCollision();
-        gameOver();
+        gameOver(obstacleType);
       }
     }
   }
