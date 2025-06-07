@@ -60,7 +60,7 @@ class KangarooGame extends FlameGame
 
   Random random = Random();
 
-  static const double minObstacleSpacing = 1.5;
+  static const double minObstacleSpacing = 1;
   static const double maxObstacleSpacing = 2.5;
   static const double minGapSpacing = 0.1;
   static const double maxGapSpacing = 1.5;
@@ -224,7 +224,7 @@ class KangarooGame extends FlameGame
 
     // Update high score display in menu
     uiOverlay.highScoreText.text = 'Best: $highScore';
-    
+
     // Update coin display
     uiOverlay.updateCoins();
   }
@@ -333,19 +333,51 @@ class KangarooGame extends FlameGame
 
   @override
   bool onTapDown(TapDownInfo info) {
-    // Check if store screen is active (highest priority)
+    print('Game received tap at: ${info.eventPosition.global}');
+    print('Current game state: $gameState');
+    print('Store screen exists: ${storeScreen != null}');
+
+    // CRITICAL: Store screen has HIGHEST priority - check first
     if (storeScreen != null) {
+      print('Store is open - delegating to store screen');
+      // Store is open - let it handle ALL taps exclusively
       return storeScreen!.onTapDown(info);
     }
-    
-    // Check UI overlay taps (buttons, etc)
+
+    // Store is not open - check UI overlay for buttons
+    print('Checking UI overlay for button taps');
     if (uiOverlay.onTapDown(info)) {
+      // UI handled the tap (like store button) - don't do anything else
+      print('UI overlay handled the tap');
       return true;
     }
-    
-    // Only handle jump input if no UI elements were tapped
+
+    // No UI elements were tapped - handle game input
+    print('No UI elements tapped - handling as game input');
     handleJumpInput();
     return true;
+  }
+
+  void showStore() {
+    print('showStore() called');
+    if (storeScreen == null) {
+      storeScreen = StoreScreen();
+      storeScreen!.priority = 2000; // Ensure it's on top
+      add(storeScreen!);
+      print('Store screen added with priority 2000');
+    }
+  }
+
+  void hideStore() {
+    print('hideStore() called');
+    if (storeScreen != null) {
+      storeScreen!.removeFromParent();
+      storeScreen = null;
+      print('Store screen removed');
+    }
+    // Update coin display when closing store
+    uiOverlay.updateCoins();
+    uiOverlay.updatePowerUpCounts();
   }
 
   @override
@@ -591,7 +623,7 @@ class KangarooGame extends FlameGame
 
   void collectCoin() {
     sessionCoins += 5; // Each coin is worth 5! (but only for this session)
-    
+
     // Update UI to show total coins
     uiOverlay.updateCoins();
 
@@ -731,23 +763,7 @@ class KangarooGame extends FlameGame
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('kangaroo_hop_high_score', highScore);
   }
-  
-  void showStore() {
-    if (storeScreen == null) {
-      storeScreen = StoreScreen();
-      add(storeScreen!);
-    }
-  }
-  
-  void hideStore() {
-    if (storeScreen != null) {
-      storeScreen!.removeFromParent();
-      storeScreen = null;
-    }
-    // Update coin display when closing store
-    uiOverlay.updateCoins();
-  }
-  
+
   void _tryUsePowerUp(PowerUpType type) {
     if (storeManager.usePowerUp(type)) {
       activatePowerUp(type);

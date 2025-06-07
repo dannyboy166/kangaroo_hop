@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flame/collisions.dart';
 import 'package:flame/components.dart';
@@ -21,18 +20,27 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
   Future<void> onLoad() async {
     await super.onLoad();
     
-    // Create power-up visual based on type
+    // Use the new image assets (without words for floating power-ups)
+    String imagePath;
     switch (type) {
       case PowerUpType.doubleJump:
-        _createDoubleJump();
+        imagePath = 'double.png';
         break;
       case PowerUpType.shield:
-        _createShield();
+        imagePath = 'shield.png';
         break;
       case PowerUpType.magnet:
-        _createMagnet();
+        imagePath = 'magnet.png';
         break;
     }
+
+    final sprite = await Sprite.load(imagePath);
+    add(SpriteComponent(
+      sprite: sprite,
+      size: size,
+      anchor: Anchor.center,
+      position: size / 2,
+    ));
     
     // Add collision detection
     add(CircleHitbox(radius: 20));
@@ -62,150 +70,14 @@ class PowerUp extends PositionComponent with HasGameReference<KangarooGame>, Has
     );
   }
   
-  void _createDoubleJump() {
-    // Enhanced background with glow effect
-    add(CircleComponent(
-      radius: 22,
-      paint: Paint()..color = Colors.purple.withValues(alpha: 0.3),
-    ));
-    add(CircleComponent(
-      radius: 18,
-      paint: Paint()..color = Colors.purple.withValues(alpha: 0.7),
-    ));
-    
-    // Enhanced jump arrows with better visibility
-    add(TextComponent(
-      text: '⬆⬆',
-      position: Vector2(20, 20),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          shadows: [
-            Shadow(
-              color: Colors.purple,
-              offset: Offset(0, 0),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-      ),
-    ));
-    
-    // Add sparkle effects around the power-up
-    for (int i = 0; i < 6; i++) {
-      final angle = (i * pi / 3);
-      add(CircleComponent(
-        radius: 3,
-        position: Vector2(
-          20 + cos(angle) * 25,
-          20 + sin(angle) * 25,
-        ),
-        paint: Paint()..color = Colors.white.withValues(alpha: 0.8),
-      ));
-    }
-  }
+  // These methods are no longer needed since we're using sprite images
+  // But keeping them as comments for reference
   
-  void _createShield() {
-    // Shield shape
-    final vertices = [
-      Vector2(20, 5),
-      Vector2(35, 15),
-      Vector2(35, 30),
-      Vector2(20, 38),
-      Vector2(5, 30),
-      Vector2(5, 15),
-    ];
-    
-    add(PolygonComponent(
-      vertices,
-      paint: Paint()..color = Colors.blue,
-    ));
-    
-    // Shield emblem
-    add(CircleComponent(
-      radius: 8,
-      position: Vector2(20, 20),
-      paint: Paint()..color = Colors.lightBlue,
-    ));
-  }
-  
-  void _createMagnet() {
-    // Enhanced background glow
-    add(CircleComponent(
-      radius: 22,
-      paint: Paint()..color = Colors.red.withValues(alpha: 0.3),
-    ));
-    
-    // Magnet shape (horseshoe) with better colors
-    add(RectangleComponent(
-      size: Vector2(12, 22),
-      position: Vector2(8, 9),
-      paint: Paint()..color = Colors.red.shade700,
-    ));
-    
-    add(RectangleComponent(
-      size: Vector2(12, 22),
-      position: Vector2(20, 9),
-      paint: Paint()..color = Colors.blue.shade700,
-    ));
-    
-    add(RectangleComponent(
-      size: Vector2(24, 10),
-      position: Vector2(8, 9),
-      paint: Paint()..color = Colors.grey.shade600,
-    ));
-    
-    // Enhanced magnetic field lines with pulsing effect
-    for (int i = 0; i < 4; i++) {
-      final fieldLine = CircleComponent(
-        radius: 12 + i * 4,
-        position: Vector2(20, 20),
-        paint: Paint()
-          ..color = Colors.cyan.withValues(alpha: 0.6 - i * 0.12)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
-      );
-      add(fieldLine);
-      
-      // Add pulsing animation to field lines
-      fieldLine.add(
-        ScaleEffect.to(
-          Vector2.all(1.2),
-          EffectController(
-            duration: 1.0 + i * 0.2,
-            reverseDuration: 1.0 + i * 0.2,
-            infinite: true,
-          ),
-        ),
-      );
-    }
-    
-    // Add attraction symbols
-    add(TextComponent(
-      text: '🪙',
-      position: Vector2(12, 32),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontSize: 12,
-        ),
-      ),
-    ));
-    
-    add(TextComponent(
-      text: '🪙',
-      position: Vector2(28, 32),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          fontSize: 12,
-        ),
-      ),
-    ));
-  }
+  /*
+  void _createDoubleJump() { ... }
+  void _createShield() { ... }
+  void _createMagnet() { ... }
+  */
   
   
   @override

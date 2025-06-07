@@ -12,6 +12,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   late TextComponent scoreText;
   late TextComponent highScoreText;
   late TextComponent coinText;
+  late PositionComponent coinDisplay;
   late TextComponent menuTitle;
   late TextComponent menuSubtitle;
   late RectangleComponent gameOverPanel;
@@ -22,13 +23,13 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   late TextComponent gameOverCoins;
   late TextComponent restartText;
   late TextComponent powerUpNotification;
-  
+
   // Store buttons
   late RectangleComponent menuStoreButton;
   late TextComponent menuStoreButtonText;
   late RectangleComponent gameOverStoreButton;
   late TextComponent gameOverStoreButtonText;
-  
+
   // Power-up display in game
   late RectangleComponent powerUpPanel;
   late TextComponent doubleJumpCountText;
@@ -57,7 +58,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
 
   static final _coinRenderer = TextPaint(
     style: const TextStyle(
-      color: Colors.yellow,
+      color: Color(0xFFF7B027), // Custom gold color
       fontSize: 24,
       fontWeight: FontWeight.bold,
     ),
@@ -65,7 +66,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
 
   static final _menuTitleRenderer = TextPaint(
     style: const TextStyle(
-      color: Colors.orange,
+      color: Color(0xFF4F9DFF), // Same blue as store
       fontSize: 64,
       fontWeight: FontWeight.bold,
       shadows: [
@@ -124,11 +125,10 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       fontWeight: FontWeight.bold,
     ),
   );
-
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    
+
     // Set size to cover the entire game area for tap detection
     size = game.size;
 
@@ -146,12 +146,31 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       textRenderer: _highScoreRenderer,
     );
 
-    // Coin display - ONLY TOTAL COINS
-    coinText = TextComponent(
-      text: '\$ ${game.storeManager.totalCoins}',
+    // Coin display with image - create a container
+    final coinContainer = PositionComponent(
       position: Vector2(20, 90),
+    );
+    
+    // Add coin image
+    Sprite.load('coin.png').then((coinSprite) {
+      final coinImage = SpriteComponent(
+        sprite: coinSprite,
+        size: Vector2(30, 30),
+        position: Vector2(0, 2), // Vertically centered with text
+      );
+      coinContainer.add(coinImage);
+    });
+    
+    // Coin text positioned next to image
+    coinText = TextComponent(
+      text: '${game.storeManager.totalCoins}',
+      position: Vector2(35, 5), // More space for larger coin
       textRenderer: _coinRenderer,
     );
+    coinContainer.add(coinText);
+    
+    // Store reference to container
+    coinDisplay = coinContainer;
 
     // Menu title
     menuTitle = TextComponent(
@@ -169,131 +188,8 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       textRenderer: _menuSubtitleRenderer,
     );
 
-    // Game over panel (semi-transparent background)
-    gameOverPanel = RectangleComponent(
-      size: Vector2(500, 320),
-      position: game.size / 2,
-      anchor: Anchor.center,
-      paint: Paint()
-        ..color = Colors.black.withValues(alpha: 0.85)
-        ..style = PaintingStyle.fill,
-    );
-
-    // Add border to the panel
-    final panelBorder = RectangleComponent(
-      size: Vector2(500, 320),
-      position: Vector2.zero(),
-      paint: Paint()
-        ..color = Colors.orange
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4,
-    );
-    gameOverPanel.add(panelBorder);
-
-    // Game over title
-    gameOverTitle = TextComponent(
-      text: 'GAME OVER',
-      position: Vector2(250, 40),
-      anchor: Anchor.center,
-      textRenderer: _gameOverTitleRenderer,
-    );
-
-    // Game over message (fun fact)
-    gameOverMessage = TextComponent(
-      text: '',
-      position: Vector2(250, 90),
-      anchor: Anchor.center,
-      textRenderer: _gameOverMessageRenderer,
-    );
-
-    // Game over score
-    gameOverScore = TextComponent(
-      text: '',
-      position: Vector2(250, 160),
-      anchor: Anchor.center,
-      textRenderer: _gameOverScoreRenderer,
-    );
-
-    // Game over high score
-    gameOverHighScore = TextComponent(
-      text: '',
-      position: Vector2(250, 190),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.yellow,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-
-    // Game over coins
-    gameOverCoins = TextComponent(
-      text: '',
-      position: Vector2(250, 220),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.yellow,
-          fontSize: 18,
-        ),
-      ),
-    );
-
-    // Game over store button
-    gameOverStoreButton = RectangleComponent(
-      size: Vector2(180, 40),
-      position: Vector2(250, 250),
-      anchor: Anchor.center,
-      paint: Paint()..color = Colors.brown.shade700,
-    );
-    
-    // Add border to store button
-    gameOverStoreButton.add(RectangleComponent(
-      size: Vector2(180, 40),
-      paint: Paint()
-        ..color = Colors.orange
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    ));
-    
-    gameOverStoreButtonText = TextComponent(
-      text: 'STORE',
-      position: Vector2(90, 20),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-    gameOverStoreButton.add(gameOverStoreButtonText);
-
-    // Restart text
-    restartText = TextComponent(
-      text: 'Tap to Play Again',
-      position: Vector2(250, 280),
-      anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-
-    // Add all game over elements to the panel
-    gameOverPanel.add(gameOverTitle);
-    gameOverPanel.add(gameOverMessage);
-    gameOverPanel.add(gameOverScore);
-    gameOverPanel.add(gameOverHighScore);
-    gameOverPanel.add(gameOverCoins);
-    gameOverPanel.add(gameOverStoreButton);
-    gameOverPanel.add(restartText);
+    // CREATE THE GAME OVER PANEL
+    _createGameOverPanel();
 
     // Power-up notification
     powerUpNotification = TextComponent(
@@ -302,30 +198,30 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: _powerUpRenderer,
     );
-    
+
     // Menu store button with better design
     menuStoreButton = RectangleComponent(
       size: Vector2(200, 50),
       position: game.size / 2 + Vector2(0, 100),
       anchor: Anchor.center,
-      paint: Paint()..color = Colors.brown.shade700,
+      paint: Paint()..color = const Color(0xFF2ED573), // Modern green
     );
-    
+
     // Add gradient effect to store button
     menuStoreButton.add(RectangleComponent(
       size: Vector2(200, 25),
-      paint: Paint()..color = Colors.brown.shade600.withValues(alpha: 0.5),
+      paint: Paint()..color = const Color(0xFF7BED9F).withValues(alpha: 0.5),
     ));
-    
+
     // Add border
     menuStoreButton.add(RectangleComponent(
       size: Vector2(200, 50),
       paint: Paint()
-        ..color = Colors.orange
+        ..color = const Color(0xFF4F9DFF) // Same blue as store
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 2,
     ));
-    
+
     menuStoreButtonText = TextComponent(
       text: 'STORE',
       position: Vector2(100, 25),
@@ -346,72 +242,204 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
     menuStoreButton.add(menuStoreButtonText);
-    
-    // Power-up panel for in-game display with better design
+
+    // Power-up panel for in-game display with modern design
     powerUpPanel = RectangleComponent(
-      size: Vector2(180, 140),
-      position: Vector2(game.size.x - 200, game.size.y - 160),
+      size: Vector2(200, 150), // Slightly larger
+      position: Vector2(game.size.x - 220, game.size.y - 170),
       paint: Paint()
-        ..color = Colors.black.withValues(alpha: 0.7)
+        ..color = const Color(0xFF1A1A2E) // Same as store background
         ..style = PaintingStyle.fill,
     );
-    
-    // Add gradient background
+
+    // Add subtle gradient overlay like the store
     powerUpPanel.add(RectangleComponent(
-      size: Vector2(180, 70),
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.3),
+      size: Vector2(200, 45), // Top third
+      paint: Paint()..color = const Color(0xFF4F9DFF).withValues(alpha: 0.1),
     ));
-    
+
     final powerUpBorder = RectangleComponent(
-      size: Vector2(180, 140),
+      size: Vector2(200, 150),
       position: Vector2.zero(),
       paint: Paint()
-        ..color = Colors.orange
+        ..color = const Color(0xFF4F9DFF) // Same blue as store
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 2, // Thinner border
     );
     powerUpPanel.add(powerUpBorder);
-    
+
     // Power-up buttons and counts
     _createPowerUpButtons();
   }
-  
-  void _createPowerUpButtons() {
-    // Double Jump button with better visuals
-    doubleJumpButton = PositionComponent(
-      position: Vector2(20, 20),
-      size: Vector2(50, 50),
+
+  void _createGameOverPanel() {
+    // Game over panel - MADE BIGGER to accommodate buttons properly
+    gameOverPanel = RectangleComponent(
+      size: Vector2(600, 420), // Increased height from 320 to 420
+      position: game.size / 2,
+      anchor: Anchor.center,
+      paint: Paint()
+        ..color = const Color(0xFF1A1A2E).withValues(alpha: 0.95) // Same as store
+        ..style = PaintingStyle.fill,
     );
-    
-    // Background circle
-    doubleJumpButton.add(CircleComponent(
-      radius: 25,
-      paint: Paint()..color = Colors.purple.shade800,
+
+    // Add border to the panel
+    final panelBorder = RectangleComponent(
+      size: Vector2(600, 420),
+      position: Vector2.zero(),
+      paint: Paint()
+        ..color = const Color(0xFF4F9DFF) // Same blue as store
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    gameOverPanel.add(panelBorder);
+
+    // Game over title
+    gameOverTitle = TextComponent(
+      text: 'GAME OVER',
+      position: Vector2(300, 40),
+      anchor: Anchor.center,
+      textRenderer: _gameOverTitleRenderer,
+    );
+
+    // Game over message (fun fact)
+    gameOverMessage = TextComponent(
+      text: '',
+      position: Vector2(300, 90),
+      anchor: Anchor.center,
+      textRenderer: _gameOverMessageRenderer,
+    );
+
+    // Game over score
+    gameOverScore = TextComponent(
+      text: '',
+      position: Vector2(300, 160),
+      anchor: Anchor.center,
+      textRenderer: _gameOverScoreRenderer,
+    );
+
+    // Game over high score
+    gameOverHighScore = TextComponent(
+      text: '',
+      position: Vector2(300, 190),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Color(0xFFF7B027), // Custom gold color
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+
+    // Game over coins
+    gameOverCoins = TextComponent(
+      text: '',
+      position: Vector2(300, 220),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Color(0xFFF7B027), // Custom gold color
+          fontSize: 18,
+        ),
+      ),
+    );
+
+    // STORE BUTTON - Much better positioned and sized
+    gameOverStoreButton = RectangleComponent(
+      size: Vector2(220, 50), // Made wider and taller
+      position: Vector2(300, 270), // Moved up to make room
+      anchor: Anchor.center,
+      paint: Paint()..color = const Color(0xFF2ED573), // Modern green
+    );
+
+    // Add gradient effect to store button
+    gameOverStoreButton.add(RectangleComponent(
+      size: Vector2(220, 25),
+      paint: Paint()..color = const Color(0xFF7BED9F).withValues(alpha: 0.5),
     ));
-    
-    // Inner circle for depth
-    doubleJumpButton.add(CircleComponent(
-      radius: 20,
-      position: Vector2(5, 5),
-      paint: Paint()..color = Colors.purple.shade600,
+
+    // Add border to store button
+    gameOverStoreButton.add(RectangleComponent(
+      size: Vector2(220, 50),
+      paint: Paint()
+        ..color = const Color(0xFF4F9DFF) // Same blue as store
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
     ));
-    
-    // Icon
-    doubleJumpButton.add(TextComponent(
-      text: '⬆⬆',
-      position: Vector2(25, 25),
+
+    gameOverStoreButtonText = TextComponent(
+      text: '🛒 STORE',
+      position: Vector2(110, 25),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 18,
+          fontSize: 22, // Bigger text
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(2, 2),
+              blurRadius: 4,
+            ),
+          ],
         ),
       ),
-    ));
-    
+    );
+    gameOverStoreButton.add(gameOverStoreButtonText);
+
+    // RESTART TEXT - Moved down to make room
+    restartText = TextComponent(
+      text: 'Tap anywhere else to Play Again',
+      position: Vector2(300, 340), // Moved down
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white70,
+          fontSize: 18,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+
+    // Add a separator line between store and restart
+    final separatorLine = RectangleComponent(
+      size: Vector2(400, 2),
+      position: Vector2(100, 310),
+      paint: Paint()..color = const Color(0xFF4F9DFF).withValues(alpha: 0.5),
+    );
+    gameOverPanel.add(separatorLine);
+
+    // Add all game over elements to the panel
+    gameOverPanel.add(gameOverTitle);
+    gameOverPanel.add(gameOverMessage);
+    gameOverPanel.add(gameOverScore);
+    gameOverPanel.add(gameOverHighScore);
+    gameOverPanel.add(gameOverCoins);
+    gameOverPanel.add(gameOverStoreButton);
+    gameOverPanel.add(restartText);
+  }
+
+  void _createPowerUpButtons() {
+    // Double Jump button with new image
+    doubleJumpButton = PositionComponent(
+      position: Vector2(20, 20),
+      size: Vector2(50, 50),
+    );
+
+    // Load and add the double jump sprite (without words)
+    Sprite.load('double.png').then((sprite) {
+      doubleJumpButton.add(SpriteComponent(
+        sprite: sprite,
+        size: Vector2(50, 50),
+        anchor: Anchor.center,
+        position: Vector2(25, 25),
+      ));
+    });
+
     powerUpPanel.add(doubleJumpButton);
-    
+
     doubleJumpCountText = TextComponent(
       text: '0',
       position: Vector2(45, 75),
@@ -425,42 +453,25 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
     powerUpPanel.add(doubleJumpCountText);
-    
-    // Shield button with better visuals
+
+    // Shield button with new image
     shieldButton = PositionComponent(
       position: Vector2(75, 20),
       size: Vector2(50, 50),
     );
-    
-    // Background circle
-    shieldButton.add(CircleComponent(
-      radius: 25,
-      paint: Paint()..color = Colors.blue.shade800,
-    ));
-    
-    // Inner circle
-    shieldButton.add(CircleComponent(
-      radius: 20,
-      position: Vector2(5, 5),
-      paint: Paint()..color = Colors.blue.shade600,
-    ));
-    
-    // Shield shape
-    final shieldIcon = PolygonComponent(
-      [
-        Vector2(25, 15),
-        Vector2(35, 20),
-        Vector2(35, 30),
-        Vector2(25, 37),
-        Vector2(15, 30),
-        Vector2(15, 20),
-      ],
-      paint: Paint()..color = Colors.white,
-    );
-    shieldButton.add(shieldIcon);
-    
+
+    // Load and add the shield sprite (without words)
+    Sprite.load('shield.png').then((sprite) {
+      shieldButton.add(SpriteComponent(
+        sprite: sprite,
+        size: Vector2(50, 50),
+        anchor: Anchor.center,
+        position: Vector2(25, 25),
+      ));
+    });
+
     powerUpPanel.add(shieldButton);
-    
+
     shieldCountText = TextComponent(
       text: '0',
       position: Vector2(100, 75),
@@ -474,45 +485,25 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
     powerUpPanel.add(shieldCountText);
-    
-    // Magnet button with better visuals
+
+    // Magnet button with new image
     magnetButton = PositionComponent(
       position: Vector2(130, 20),
       size: Vector2(50, 50),
     );
-    
-    // Background circle
-    magnetButton.add(CircleComponent(
-      radius: 25,
-      paint: Paint()..color = Colors.red.shade800,
-    ));
-    
-    // Inner circle
-    magnetButton.add(CircleComponent(
-      radius: 20,
-      position: Vector2(5, 5),
-      paint: Paint()..color = Colors.red.shade600,
-    ));
-    
-    // Magnet shape
-    magnetButton.add(RectangleComponent(
-      size: Vector2(8, 15),
-      position: Vector2(17, 20),
-      paint: Paint()..color = Colors.white,
-    ));
-    magnetButton.add(RectangleComponent(
-      size: Vector2(8, 15),
-      position: Vector2(27, 20),
-      paint: Paint()..color = Colors.white,
-    ));
-    magnetButton.add(RectangleComponent(
-      size: Vector2(18, 6),
-      position: Vector2(17, 20),
-      paint: Paint()..color = Colors.grey.shade300,
-    ));
-    
+
+    // Load and add the magnet sprite (without words)
+    Sprite.load('magnet.png').then((sprite) {
+      magnetButton.add(SpriteComponent(
+        sprite: sprite,
+        size: Vector2(50, 50),
+        anchor: Anchor.center,
+        position: Vector2(25, 25),
+      ));
+    });
+
     powerUpPanel.add(magnetButton);
-    
+
     magnetCountText = TextComponent(
       text: '0',
       position: Vector2(155, 75),
@@ -526,7 +517,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
     powerUpPanel.add(magnetCountText);
-    
+
     // Instructions
     powerUpPanel.add(TextComponent(
       text: 'Tap to use',
@@ -539,7 +530,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
         ),
       ),
     ));
-    
+
     // Add key bindings
     powerUpPanel.add(TextComponent(
       text: '1        2        3',
@@ -547,7 +538,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          color: Colors.orange,
+          color: Color(0xFF4F9DFF), // Same blue as store
           fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
@@ -559,8 +550,8 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     add(menuTitle);
     add(menuSubtitle);
     add(menuStoreButton);
-    add(coinText);
-    
+    add(coinDisplay);
+
     // Update coin display
     updateCoins();
 
@@ -587,7 +578,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
         ),
       ),
     );
-    
+
     // Add hover effect to store button
     menuStoreButton.add(
       ScaleEffect.to(
@@ -605,13 +596,13 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     menuTitle.removeFromParent();
     menuSubtitle.removeFromParent();
     menuStoreButton.removeFromParent();
-    coinText.removeFromParent();
+    coinDisplay.removeFromParent();
   }
 
   void showGameUI() {
     add(scoreText);
     add(highScoreText);
-    add(coinText);
+    add(coinDisplay);
     add(powerUpPanel);
 
     // Update displays
@@ -624,7 +615,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   }
 
   void updateCoins() {
-    coinText.text = '\$ ${game.storeManager.totalCoins}';
+    coinText.text = '${game.storeManager.totalCoins}';
   }
 
   void showGameOver(int score, int highScore, int coins,
@@ -679,7 +670,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       gameOverHighScore.text = 'Best: $highScore';
     }
 
-    gameOverCoins.text = 'Coins Earned: $coins \$';
+    gameOverCoins.text = 'Coins Earned: $coins';
 
     add(gameOverPanel);
 
@@ -749,90 +740,124 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
   }
-  
+
   void updatePowerUpCounts() {
     doubleJumpCountText.text = '${game.storeManager.doubleJumpCount}';
     shieldCountText.text = '${game.storeManager.shieldCount}';
     magnetCountText.text = '${game.storeManager.magnetCount}';
   }
-  
+
   void hideGameUI() {
     scoreText.removeFromParent();
     highScoreText.removeFromParent();
-    coinText.removeFromParent();
+    coinDisplay.removeFromParent();
     powerUpPanel.removeFromParent();
   }
-  
+
   bool handleStoreButtonTap(TapDownInfo info) {
     final worldPosition = info.eventPosition.global;
-    
+
     // Check menu store button with proper bounds
     if (menuStoreButton.parent != null) {
-      final buttonBounds = menuStoreButton.toRect();
+      final buttonAbsolutePos = menuStoreButton.absolutePosition;
+      final buttonBounds = Rect.fromLTWH(
+        buttonAbsolutePos.x -
+            menuStoreButton.size.x / 2, // Account for center anchor
+        buttonAbsolutePos.y - menuStoreButton.size.y / 2,
+        menuStoreButton.size.x,
+        menuStoreButton.size.y,
+      );
+
       if (buttonBounds.contains(worldPosition.toOffset())) {
+        print('Menu store button clicked!');
         AudioManager().playButtonClick();
         game.showStore();
         return true;
       }
     }
-    
-    // Check game over store button
+
+    // Check game over store button - COMPLETELY REWRITTEN for accuracy
     if (gameOverStoreButton.parent != null && gameOverPanel.parent != null) {
-      final panelPos = gameOverPanel.absolutePosition;
-      final buttonPos = gameOverStoreButton.position - Vector2(90, 20); // Account for anchor
-      final absoluteButtonPos = panelPos + buttonPos;
+      // Get the game over panel's absolute position (center anchor)
+      final panelAbsolutePos = gameOverPanel.absolutePosition;
+      final panelCenterOffset = Vector2(
+        panelAbsolutePos.x - gameOverPanel.size.x / 2,
+        panelAbsolutePos.y - gameOverPanel.size.y / 2,
+      );
+
+      // Store button position is relative to panel, with center anchor
+      final buttonRelativePos = gameOverStoreButton.position;
+      final buttonAbsolutePos = Vector2(
+        panelCenterOffset.x +
+            buttonRelativePos.x -
+            gameOverStoreButton.size.x / 2,
+        panelCenterOffset.y +
+            buttonRelativePos.y -
+            gameOverStoreButton.size.y / 2,
+      );
+
       final buttonBounds = Rect.fromLTWH(
-        absoluteButtonPos.x,
-        absoluteButtonPos.y,
+        buttonAbsolutePos.x,
+        buttonAbsolutePos.y,
         gameOverStoreButton.size.x,
         gameOverStoreButton.size.y,
       );
-      
+
+      print('Game over store button bounds: $buttonBounds');
+      print('Tap position: ${worldPosition.toOffset()}');
+      print(
+          'Button contains tap: ${buttonBounds.contains(worldPosition.toOffset())}');
+
       if (buttonBounds.contains(worldPosition.toOffset())) {
+        print('Game over store button clicked!');
         AudioManager().playButtonClick();
         game.showStore();
         return true;
       }
     }
-    
+
     return false;
   }
-  
+
   bool onTapDown(TapDownInfo info) {
-    final worldPosition = info.eventPosition.global;
-    
-    // Check store buttons first (highest priority)
+    print('UI Overlay tap detected at: ${info.eventPosition.global}');
+
+    // HIGHEST PRIORITY: Check store buttons first
     if (handleStoreButtonTap(info)) {
-      return true;
+      print('Store button handled the tap');
+      return true; // Store button was clicked - prevent any other handling
     }
-    
+
     // Check power-up buttons (only during gameplay)
     if (game.gameState == GameState.playing && powerUpPanel.parent != null) {
-      final panelPos = powerUpPanel.absolutePosition;
-      
+      final worldPosition = info.eventPosition.global;
+      final panelAbsolutePos = powerUpPanel.absolutePosition;
+
       // Convert tap position to local coordinates relative to panel
-      final localPos = worldPosition - panelPos;
-      
+      final localPos = worldPosition - panelAbsolutePos;
+
       // Check each button with proper bounds
       if (_checkButtonTap(localPos, doubleJumpButton)) {
         _usePowerUp(PowerUpType.doubleJump);
         return true;
       }
-      
+
       if (_checkButtonTap(localPos, shieldButton)) {
         _usePowerUp(PowerUpType.shield);
         return true;
       }
-      
+
       if (_checkButtonTap(localPos, magnetButton)) {
         _usePowerUp(PowerUpType.magnet);
         return true;
       }
     }
-    
+
+    print('No UI elements handled the tap');
+    // If no UI elements were tapped, return false to let game handle it
     return false;
   }
-  
+
   bool _checkButtonTap(Vector2 localPos, PositionComponent button) {
     final buttonBounds = Rect.fromLTWH(
       button.position.x,
@@ -842,13 +867,13 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     );
     return buttonBounds.contains(localPos.toOffset());
   }
-  
+
   void _usePowerUp(PowerUpType type) {
     if (game.storeManager.usePowerUp(type)) {
       AudioManager().playButtonClick();
       game.activatePowerUp(type);
       updatePowerUpCounts();
-      
+
       // Add button press animation
       PositionComponent button;
       switch (type) {
@@ -862,7 +887,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
           button = magnetButton;
           break;
       }
-      
+
       button.add(
         ScaleEffect.to(
           Vector2.all(0.9),

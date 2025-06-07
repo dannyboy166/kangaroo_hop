@@ -73,6 +73,14 @@ flutter:
     - assets/images/camel.png
     - assets/images/kangaroos.png
     - assets/images/emu_sheet.png
+    - assets/images/coin.png
+    - assets/images/shield.png
+    - assets/images/shield_words.png
+    - assets/images/magnet.png
+    - assets/images/magnet_words.png
+    - assets/images/double.png
+    - assets/images/double_words.png
+    - assets/images/cross.png
 
 
 

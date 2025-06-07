@@ -20,43 +20,58 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Semi-transparent background
+    // CRITICAL: Set very high priority to ensure store appears on top
+    priority = 2000; // Higher than UI overlay (1000)
+
+    // Semi-transparent background that covers ENTIRE screen
     background = RectangleComponent(
       size: game.size,
-      paint: Paint()..color = Colors.black.withValues(alpha: 0.7),
+      paint: Paint()..color = Colors.black.withValues(alpha: 0.8),
     );
     add(background);
 
-    // Store panel
+    // Store panel - much larger and responsive with rounded corners
+    final panelWidth = game.size.x * 0.9;
+    final panelHeight = game.size.y * 0.8;
     storePanel = RectangleComponent(
-      size: Vector2(600, 500),
+      size: Vector2(panelWidth, panelHeight),
       position: game.size / 2,
       anchor: Anchor.center,
       paint: Paint()
-        ..color = Colors.brown.shade800
+        ..color = const Color(0xFF1A1A2E)
         ..style = PaintingStyle.fill,
     );
-    add(storePanel);
-
-    // Panel border
-    final panelBorder = RectangleComponent(
-      size: Vector2(600, 500),
+    
+    // Add subtle gradient effect with overlays
+    final gradientOverlay = RectangleComponent(
+      size: Vector2(panelWidth, panelHeight * 0.3),
       position: Vector2.zero(),
       paint: Paint()
-        ..color = Colors.orange
+        ..color = const Color(0xFF4F9DFF).withValues(alpha: 0.1)
+        ..style = PaintingStyle.fill,
+    );
+    storePanel.add(gradientOverlay);
+    add(storePanel);
+
+    // Simple clean border
+    final panelBorder = RectangleComponent(
+      size: Vector2(panelWidth, panelHeight),
+      position: Vector2.zero(),
+      paint: Paint()
+        ..color = const Color(0xFF4F9DFF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 6,
+        ..strokeWidth = 3,
     );
     storePanel.add(panelBorder);
 
-    // Title
+    // Title - only animated element, positioned responsively
     titleText = TextComponent(
       text: 'POWER-UP STORE',
-      position: Vector2(300, 40),
+      position: Vector2(panelWidth / 2, panelHeight * 0.1),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          color: Colors.orange,
+          color: Color(0xFF4F9DFF),
           fontSize: 32,
           fontWeight: FontWeight.bold,
           shadows: [
@@ -71,54 +86,94 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
     );
     storePanel.add(titleText);
 
-    // Coin display
+    // Coin display with image and custom color
+    final coinContainer = PositionComponent(
+      position: Vector2(panelWidth / 2, panelHeight * 0.18),
+    );
+    
+    // Add coin image
+    Sprite.load('coin.png').then((coinSprite) {
+      final coinImage = SpriteComponent(
+        sprite: coinSprite,
+        size: Vector2(28, 28),
+        position: Vector2(-55, -14), // Move coin further left
+      );
+      coinContainer.add(coinImage);
+    });
+    
+    // Add coin text with new color
     coinText = TextComponent(
-      text: '\$ ${game.storeManager.totalCoins}',
-      position: Vector2(300, 80),
+      text: '${game.storeManager.totalCoins}',
+      position: Vector2(5, 0), // Move text further right for better separation
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          color: Colors.yellow,
+          color: Color(0xFFF7B027), // Your custom color
           fontSize: 24,
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(1, 1),
+              blurRadius: 2,
+            ),
+          ],
         ),
       ),
     );
-    storePanel.add(coinText);
+    coinContainer.add(coinText);
+    storePanel.add(coinContainer);
 
-    // Close button
+    // Close button with cross image - positioned relative to panel size
     closeButton = RectangleComponent(
-      size: Vector2(80, 40),
-      position: Vector2(520, 20),
-      paint: Paint()..color = Colors.red.shade700,
+      size: Vector2(40, 40), // Square button for the cross
+      position: Vector2(panelWidth - 60, 20),
+      paint: Paint()..color = Colors.transparent, // Transparent background
     );
     storePanel.add(closeButton);
 
+    // Load and add cross image
+    Sprite.load('cross.png').then((crossSprite) {
+      final crossImage = SpriteComponent(
+        sprite: crossSprite,
+        size: Vector2(32, 32), // Slightly smaller than button
+        position: Vector2(20, 20), // Center in button
+        anchor: Anchor.center,
+      );
+      closeButton.add(crossImage);
+    });
+
+    // Keep text component for reference but make it empty
     closeButtonText = TextComponent(
-      text: 'X',
-      position: Vector2(40, 20),
+      text: '',
+      position: Vector2(20, 20),
       anchor: Anchor.center,
-      textRenderer: TextPaint(
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
     );
     closeButton.add(closeButtonText);
 
-    // Create store items
+    // Create store items with proper responsive spacing
     _createStoreItems();
 
-    // Animate panel entrance
+    // Simple entrance animation for panel only
     storePanel.scale = Vector2.all(0.3);
     storePanel.add(
       ScaleEffect.to(
         Vector2.all(1),
         EffectController(
-          duration: 0.5,
-          curve: Curves.elasticOut,
+          duration: 0.3,
+          curve: Curves.easeOut,
+        ),
+      ),
+    );
+
+    // Only animate the title with subtle pulsing
+    titleText.add(
+      ScaleEffect.to(
+        Vector2.all(1.05),
+        EffectController(
+          duration: 1.5,
+          reverseDuration: 1.5,
+          infinite: true,
         ),
       ),
     );
@@ -131,13 +186,19 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
       PowerUpType.magnet
     ];
 
+    // Calculate item positioning with much better spacing
+    final itemWidth = 240.0; // Wider items
+    final totalWidth = storePanel.size.x;
+    final usableWidth = totalWidth - 60; // Smaller margins for more space
+    final spacing = (usableWidth - (itemWidth * powerUps.length)) / (powerUps.length + 1);
+    
     for (int i = 0; i < powerUps.length; i++) {
       final powerUpType = powerUps[i];
-      final xPos = 100.0 + (i * 170);
+      final xPos = 30 + spacing + (i * (itemWidth + spacing));
 
       final item = StoreItem(
         powerUpType: powerUpType,
-        position: Vector2(xPos, 200),
+        position: Vector2(xPos, storePanel.size.y * 0.32),
       );
       storeItems.add(item);
       storePanel.add(item);
@@ -145,7 +206,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   }
 
   void updateCoinDisplay() {
-    coinText.text = '\$ ${game.storeManager.totalCoins}';
+    coinText.text = '${game.storeManager.totalCoins}';
 
     // Update all store items
     for (final item in storeItems) {
@@ -156,21 +217,44 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   bool onTapDown(TapDownInfo info) {
     final localPoint = info.eventPosition.global;
 
-    // Check close button
-    if (closeButton
-        .containsLocalPoint(localPoint - closeButton.absolutePosition)) {
+    // Convert to local coordinates relative to store panel
+    final storeLocalPoint = localPoint - storePanel.absolutePosition + storePanel.size / 2;
+
+    // Check close button with proper bounds checking
+    final closeButtonBounds = Rect.fromLTWH(
+      closeButton.position.x,
+      closeButton.position.y,
+      closeButton.size.x,
+      closeButton.size.y,
+    );
+
+    if (closeButtonBounds.contains(storeLocalPoint.toOffset())) {
       game.hideStore();
       return true;
     }
 
     // Check store items
     for (final item in storeItems) {
-      if (item.onTapDown(localPoint)) {
+      if (item.onTapDown(storeLocalPoint)) {
         updateCoinDisplay();
         return true;
       }
     }
 
+    // If tapped on background (outside panel), close store
+    final panelBounds = Rect.fromLTWH(
+      storePanel.position.x - storePanel.size.x / 2,
+      storePanel.position.y - storePanel.size.y / 2,
+      storePanel.size.x,
+      storePanel.size.y,
+    );
+
+    if (!panelBounds.contains(localPoint.toOffset())) {
+      game.hideStore();
+      return true;
+    }
+
+    // Consume the tap to prevent it from propagating
     return true;
   }
 }
@@ -188,117 +272,165 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
   StoreItem({
     required this.powerUpType,
     required Vector2 position,
-  }) : super(position: position, size: Vector2(140, 220));
+  }) : super(position: position, size: Vector2(240, 370)); // Even larger items for better spacing
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
-    // Item background
+    // Clean item background
     itemBackground = RectangleComponent(
       size: size,
       paint: Paint()
-        ..color = Colors.brown.shade600
+        ..color = const Color(0xFF16213E)
         ..style = PaintingStyle.fill,
     );
     add(itemBackground);
 
-    // Item border
+    // Simple clean border
     final border = RectangleComponent(
       size: size,
       paint: Paint()
-        ..color = Colors.orange.shade300
+        ..color = const Color(0xFF4F9DFF)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 2,
     );
     add(border);
 
-    // Power-up visual
+    // Add subtle item gradient
+    final itemGradient = RectangleComponent(
+      size: Vector2(size.x, size.y * 0.3),
+      position: Vector2.zero(),
+      paint: Paint()
+        ..color = const Color(0xFF4F9DFF).withValues(alpha: 0.05)
+        ..style = PaintingStyle.fill,
+    );
+    add(itemGradient);
+    
+    // Power-up visual - well spaced and larger
     final powerUpVisual = PowerUpVisual(type: powerUpType);
-    powerUpVisual.position = Vector2(70, 50);
+    powerUpVisual.position = Vector2(size.x / 2, 90); // More spacing from top
+    powerUpVisual.anchor = Anchor.center; // Center the logo
+    powerUpVisual.size = Vector2(80, 80); // Even larger visual
     add(powerUpVisual);
 
-    // Name
+    // Name with better spacing - moved down
     nameText = TextComponent(
       text: game.storeManager.getPowerUpName(powerUpType),
-      position: Vector2(70, 90),
+      position: Vector2(size.x / 2, 180),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 16,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(1, 1),
+              blurRadius: 2,
+            ),
+          ],
         ),
       ),
     );
     add(nameText);
 
-    // Description
+    // Description with proper spacing
+    final description = game.storeManager.getPowerUpDescription(powerUpType);
     descriptionText = TextComponent(
-      text: game.storeManager.getPowerUpDescription(powerUpType),
-      position: Vector2(70, 130),
+      text: description,
+      position: Vector2(size.x / 2, 220),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white70,
-          fontSize: 12,
+          fontSize: 13,
         ),
       ),
     );
     add(descriptionText);
 
-    // Price
+    // Price with good spacing
     priceText = TextComponent(
       text: '\$ ${game.storeManager.getPowerUpPrice(powerUpType)}',
-      position: Vector2(70, 160),
+      position: Vector2(size.x / 2, 260),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
-          color: Colors.yellow,
-          fontSize: 14,
+          color: Color(0xFFFFD700),
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(1, 1),
+              blurRadius: 2,
+            ),
+          ],
         ),
       ),
     );
     add(priceText);
 
-    // Count
+    // Count with proper spacing
     countText = TextComponent(
       text: 'Owned: ${game.storeManager.getPowerUpCount(powerUpType)}/3',
-      position: Vector2(70, 175),
+      position: Vector2(size.x / 2, 295),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 12,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
     add(countText);
 
-    // Buy button
+    // Buy button with good proportions and spacing
     buyButton = RectangleComponent(
-      size: Vector2(120, 30),
-      position: Vector2(10, 185),
-      paint: Paint()..color = Colors.green.shade700,
+      size: Vector2(200, 50), // Even larger button
+      position: Vector2(20, 310), // Better positioning with more spacing
+      paint: Paint()..color = const Color(0xFF2ED573),
     );
     add(buyButton);
 
+    // Simple button border
+    final buttonBorder = RectangleComponent(
+      size: Vector2(200, 50),
+      position: Vector2.zero(),
+      paint: Paint()
+        ..color = const Color(0xFF7BED9F)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    buyButton.add(buttonBorder);
+
     buyButtonText = TextComponent(
       text: 'BUY',
-      position: Vector2(60, 15),
+      position: Vector2(100, 25),
       anchor: Anchor.center,
       textRenderer: TextPaint(
         style: const TextStyle(
           color: Colors.white,
-          fontSize: 16,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(1, 1),
+              blurRadius: 2,
+            ),
+          ],
         ),
       ),
     );
     buyButton.add(buyButtonText);
 
     updateDisplay();
+
+    // NO continuous animations - items are static
   }
 
   void updateDisplay() {
@@ -309,26 +441,34 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
     final maxReached = game.storeManager.getPowerUpCount(powerUpType) >= 3;
 
     if (maxReached) {
-      buyButton.paint.color = Colors.grey.shade600;
+      buyButton.paint.color = const Color(0xFF57606F);
       buyButtonText.text = 'MAX';
     } else if (canPurchase) {
-      buyButton.paint.color = Colors.green.shade700;
+      buyButton.paint.color = const Color(0xFF2ED573);
       buyButtonText.text = 'BUY';
     } else {
-      buyButton.paint.color = Colors.red.shade700;
+      buyButton.paint.color = const Color(0xFFFF4757);
       buyButtonText.text = 'BUY';
     }
   }
 
-  bool onTapDown(Vector2 worldPosition) {
-    final localPoint = worldPosition - absolutePosition;
+  bool onTapDown(Vector2 storeLocalPosition) {
+    // Convert store local position to item local position
+    final itemLocalPoint = storeLocalPosition - position;
 
-    if (buyButton.containsLocalPoint(localPoint - buyButton.position)) {
+    final buttonBounds = Rect.fromLTWH(
+      buyButton.position.x,
+      buyButton.position.y,
+      buyButton.size.x,
+      buyButton.size.y,
+    );
+
+    if (buttonBounds.contains(itemLocalPoint.toOffset())) {
       if (game.storeManager.purchasePowerUp(powerUpType)) {
-        // Purchase successful - add animation
+        // Simple purchase feedback - just a quick scale
         buyButton.add(
           ScaleEffect.to(
-            Vector2.all(1.2),
+            Vector2.all(1.1),
             EffectController(duration: 0.1),
             onComplete: () {
               buyButton.add(
@@ -352,64 +492,32 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
 class PowerUpVisual extends PositionComponent {
   final PowerUpType type;
 
-  PowerUpVisual({required this.type}) : super(size: Vector2(30, 30));
+  PowerUpVisual({required this.type}) : super(size: Vector2(80, 80));
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
 
+    // Use the new image assets with words for store display
+    String imagePath;
     switch (type) {
       case PowerUpType.doubleJump:
-        add(CircleComponent(
-          radius: 15,
-          paint: Paint()..color = Colors.purple,
-        ));
-        add(TextComponent(
-          text: '⬆⬆',
-          position: Vector2(15, 15),
-          anchor: Anchor.center,
-          textRenderer: TextPaint(
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ));
+        imagePath = 'double.png';
         break;
-
       case PowerUpType.shield:
-        final vertices = [
-          Vector2(15, 3),
-          Vector2(25, 10),
-          Vector2(25, 22),
-          Vector2(15, 27),
-          Vector2(5, 22),
-          Vector2(5, 10),
-        ];
-        add(PolygonComponent(
-          vertices,
-          paint: Paint()..color = Colors.blue,
-        ));
+        imagePath = 'shield.png';
         break;
-
       case PowerUpType.magnet:
-        add(RectangleComponent(
-          size: Vector2(8, 16),
-          position: Vector2(6, 7),
-          paint: Paint()..color = Colors.red,
-        ));
-        add(RectangleComponent(
-          size: Vector2(8, 16),
-          position: Vector2(16, 7),
-          paint: Paint()..color = Colors.blue,
-        ));
-        add(RectangleComponent(
-          size: Vector2(18, 7),
-          position: Vector2(6, 7),
-          paint: Paint()..color = Colors.grey,
-        ));
+        imagePath = 'magnet.png';
         break;
     }
+
+    final sprite = await Sprite.load(imagePath);
+    add(SpriteComponent(
+      sprite: sprite,
+      size: size,
+      anchor: Anchor.center,
+      position: size / 2,
+    ));
   }
 }
