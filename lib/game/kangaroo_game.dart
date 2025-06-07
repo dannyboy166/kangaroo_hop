@@ -178,7 +178,7 @@ class KangarooGame extends FlameGame
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
-    gameSpeed = 0.0;  // Stop background movement in menu
+    gameSpeed = 0.0; // Stop background movement in menu
     speedMultiplier = 1.0;
     distanceTraveled = 0.0;
     gameOverTriggered = false;
@@ -364,13 +364,22 @@ class KangarooGame extends FlameGame
       // Performance: Only process magnet effect if active
       if (isMagnetActive) {
         final kangarooPos = kangaroo.position;
-        // Pull coins to a position slightly ahead of the kangaroo
-        final targetPos = kangarooPos + Vector2(30, 0);
+        // Target position should be at the kangaroo's center, lowered
+        final targetPos =
+            kangarooPos + Vector2(70, 85); // Updated to match new position
+
         for (final coin in _coins) {
           final distance = coin.position.distanceTo(kangarooPos);
-          if (distance < 250) {
+          if (distance < 300) {
+            // Increased attraction range
             final direction = (targetPos - coin.position).normalized();
-            coin.position += direction * 500 * dt;
+            // Much stronger pull force
+            coin.position += direction * 800 * dt; // Increased from 500 to 800
+
+            // Once coin gets very close, snap it to the kangaroo for collection
+            if (distance < 50) {
+              coin.position = targetPos;
+            }
           }
         }
       }

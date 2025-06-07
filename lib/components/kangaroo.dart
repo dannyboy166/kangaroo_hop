@@ -48,7 +48,7 @@ class Kangaroo extends SpriteAnimationComponent
 
     // Load the NEW 12-frame sprite sheet (768x256 with 6x2 frames, each 128x128)
     final spriteSheet = await game.images.load('kangaroos.png');
-    
+
     // Create idle animation (just the first frame - for menu screen)
     idleAnimation = SpriteAnimation.fromFrameData(
       spriteSheet,
@@ -155,15 +155,16 @@ class Kangaroo extends SpriteAnimationComponent
     animation = runningAnimation;
 
     // Add collision detection (made slightly less wide)
-    final hitbox = RectangleHitbox(size: Vector2(60, 40), position: Vector2(55, 80));
-    
+    final hitbox =
+        RectangleHitbox(size: Vector2(60, 40), position: Vector2(55, 80));
+
     // Make the collision box visible for testing
     hitbox.paint = Paint()
       ..color = Colors.red.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     hitbox.renderShape = true;
-    
+
     add(hitbox);
   }
 
@@ -280,7 +281,7 @@ class Kangaroo extends SpriteAnimationComponent
     isShielded = true;
     shieldVisual = CircleComponent(
       radius: 60,
-      position: Vector2(60, 60), // Centered on 120x120 kangaroo
+      position: Vector2(70, 85), // Moved closer to kangaroo center (was 60, 60)
       anchor: Anchor.center,
       paint: Paint()
         ..color = Colors.blue.withValues(alpha: 0.3)
@@ -315,12 +316,12 @@ class Kangaroo extends SpriteAnimationComponent
 
     for (int i = 0; i < sparkleCount; i++) {
       final angle = (i * pi / (sparkleCount / 2));
-      final radius = 105.0; // 3x bigger (was 35)
+      final radius = 90.0; // Reduced from 105 to bring closer to kangaroo
       final sparkle = CircleComponent(
-        radius: 9, // 3x bigger (was 3)
+        radius: 9,
         position: Vector2(
-          60 + cos(angle) * radius, // Adjusted for 120x120 sprite center
-          60 + sin(angle) * radius,
+          70 + cos(angle) * radius, // Adjusted to center on kangaroo (was 60)
+          85 + sin(angle) * radius, // Moved lower (was 70)
         ),
         paint: Paint()..color = Colors.purple.withValues(alpha: 0.7),
       );
@@ -351,36 +352,31 @@ class Kangaroo extends SpriteAnimationComponent
   void activateMagnetIndicator() {
     if (magnetIndicator != null) return;
 
-    magnetIndicator = PositionComponent(position: Vector2(60, 135)); // Adjusted position for bigger kangaroo
+    magnetIndicator =
+        PositionComponent(position: Vector2(70, 85)); // Centered on kangaroo
 
     if (game.shouldReduceEffects) {
-      magnetIndicator!.add(TextComponent(
-        text: '🧲',
-        position: Vector2(0, 0),
-        anchor: Anchor.center,
-        textRenderer: TextPaint(
-          style: const TextStyle(fontSize: 12),
-        ),
-      ));
-    } else {
+      // Just the blue circles for reduced effects
       for (int i = 0; i < 3; i++) {
         magnetIndicator!.add(CircleComponent(
-          radius: (18 + i * 9), // 3x bigger (was 6 + i * 3)
+          radius: (18 + i * 9),
           paint: Paint()
             ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
             ..style = PaintingStyle.stroke
-            ..strokeWidth = 6, // 3x bigger (was 2)
+            ..strokeWidth = 6,
         ));
       }
-
-      magnetIndicator!.add(TextComponent(
-        text: '🧲',
-        position: Vector2(0, 0),
-        anchor: Anchor.center,
-        textRenderer: TextPaint(
-          style: const TextStyle(fontSize: 12),
-        ),
-      ));
+    } else {
+      // Full effect with rotating blue circles (no magnet emoji)
+      for (int i = 0; i < 3; i++) {
+        magnetIndicator!.add(CircleComponent(
+          radius: (18 + i * 9),
+          paint: Paint()
+            ..color = Colors.cyan.withValues(alpha: 0.5 - i * 0.15)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 6,
+        ));
+      }
 
       magnetIndicator!.add(
         RotateEffect.by(
