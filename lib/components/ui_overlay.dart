@@ -150,7 +150,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     final coinContainer = PositionComponent(
       position: Vector2(20, 90),
     );
-    
+
     // Add coin image
     Sprite.load('coin.png').then((coinSprite) {
       final coinImage = SpriteComponent(
@@ -160,7 +160,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       );
       coinContainer.add(coinImage);
     });
-    
+
     // Coin text positioned next to image
     coinText = TextComponent(
       text: '${game.storeManager.totalCoins}',
@@ -168,7 +168,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       textRenderer: _coinRenderer,
     );
     coinContainer.add(coinText);
-    
+
     // Store reference to container
     coinDisplay = coinContainer;
 
@@ -279,7 +279,8 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       position: game.size / 2,
       anchor: Anchor.center,
       paint: Paint()
-        ..color = const Color(0xFF1A1A2E).withValues(alpha: 0.95) // Same as store
+        ..color =
+            const Color(0xFF1A1A2E).withValues(alpha: 0.95) // Same as store
         ..style = PaintingStyle.fill,
     );
 
@@ -613,14 +614,16 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   void updateScore(int score) {
     scoreText.text = 'Score: $score';
   }
+// In ui_overlay.dart - Fix the updateCoins method
 
   void updateCoins() {
-    // Show total coins + session coins during gameplay for live updates
-    final totalDisplayCoins = game.storeManager.totalCoins + game.sessionCoins;
+    // Always show the current total coins consistently
+    final totalDisplayCoins = game.getCurrentTotalCoins(); // Use the new method
     coinText.text = '$totalDisplayCoins';
   }
 
-  void showGameOver(int score, int highScore, int coins,
+// Update the showGameOver method to show the coins that were actually earned this session
+  void showGameOver(int score, int highScore, int coinsEarned,
       [ObstacleType? obstacleType]) {
     // Set obstacle-specific game over message with shorter, punchier text
     String gameOverMessageText = 'Better luck next time!';
@@ -672,7 +675,8 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       gameOverHighScore.text = 'Best: $highScore';
     }
 
-    gameOverCoins.text = 'Coins Earned: $coins';
+    // FIXED: Show the actual coins earned this session (passed as parameter)
+    gameOverCoins.text = 'Coins Earned: $coinsEarned';
 
     add(gameOverPanel);
 

@@ -296,12 +296,17 @@ class KangarooGame extends FlameGame
     if (score > highScore) {
       highScore = score;
     }
+
+    // CRITICAL FIX: Add session coins to total and reset session coins
     storeManager.addCoins(sessionCoins);
+    sessionCoins = 0; // Reset session coins after adding to total
+
     saveData();
 
     // Show game over with particle effects
     addGameOverParticles();
-    uiOverlay.showGameOver(score, highScore, sessionCoins, obstacleType);
+    uiOverlay.showGameOver(
+        score, highScore, sessionCoins, obstacleType); // This will now be 0
 
     // Add delay before allowing restart
     Future.delayed(const Duration(seconds: 1), () {
@@ -359,6 +364,14 @@ class KangarooGame extends FlameGame
 
   void showStore() {
     print('showStore() called');
+
+    // CRITICAL: Add session coins to total before showing store
+    // This ensures the store shows the most up-to-date coin count
+    if (sessionCoins > 0) {
+      storeManager.addCoins(sessionCoins);
+      sessionCoins = 0;
+    }
+
     if (storeScreen == null) {
       storeScreen = StoreScreen();
       storeScreen!.priority = 2000; // Ensure it's on top
@@ -376,9 +389,14 @@ class KangarooGame extends FlameGame
       storeScreen = null;
       print('Store screen removed');
     }
-    // Update coin display when closing store
+    // Update coin display when closing store - now should show only totalCoins since sessionCoins is 0
     uiOverlay.updateCoins();
     uiOverlay.updatePowerUpCounts();
+  }
+
+// Add a method to get current total coins for display
+  int getCurrentTotalCoins() {
+    return storeManager.totalCoins + sessionCoins;
   }
 
   @override

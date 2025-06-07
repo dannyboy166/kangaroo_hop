@@ -41,7 +41,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
         ..color = const Color(0xFF1A1A2E)
         ..style = PaintingStyle.fill,
     );
-    
+
     // Add subtle gradient effect with overlays
     final gradientOverlay = RectangleComponent(
       size: Vector2(panelWidth, panelHeight * 0.3),
@@ -90,7 +90,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
     final coinContainer = PositionComponent(
       position: Vector2(panelWidth / 2, panelHeight * 0.18),
     );
-    
+
     // Add coin image
     Sprite.load('coin.png').then((coinSprite) {
       final coinImage = SpriteComponent(
@@ -100,7 +100,7 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
       );
       coinContainer.add(coinImage);
     });
-    
+
     // Add coin text with new color
     coinText = TextComponent(
       text: '${game.storeManager.totalCoins + game.sessionCoins}',
@@ -190,8 +190,9 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
     final itemWidth = 240.0; // Wider items
     final totalWidth = storePanel.size.x;
     final usableWidth = totalWidth - 60; // Smaller margins for more space
-    final spacing = (usableWidth - (itemWidth * powerUps.length)) / (powerUps.length + 1);
-    
+    final spacing =
+        (usableWidth - (itemWidth * powerUps.length)) / (powerUps.length + 1);
+
     for (int i = 0; i < powerUps.length; i++) {
       final powerUpType = powerUps[i];
       final xPos = 30 + spacing + (i * (itemWidth + spacing));
@@ -208,8 +209,9 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
   void updateCoinDisplay() {
     // Check if components are initialized before updating
     if (!isLoaded) return;
-    
-    coinText.text = '${game.storeManager.totalCoins + game.sessionCoins}';
+
+    // FIXED: Show only total coins (session coins should have been added to total before opening store)
+    coinText.text = '${game.storeManager.totalCoins}';
 
     // Update all store items
     for (final item in storeItems) {
@@ -221,7 +223,8 @@ class StoreScreen extends Component with HasGameReference<KangarooGame> {
     final localPoint = info.eventPosition.global;
 
     // Convert to local coordinates relative to store panel
-    final storeLocalPoint = localPoint - storePanel.absolutePosition + storePanel.size / 2;
+    final storeLocalPoint =
+        localPoint - storePanel.absolutePosition + storePanel.size / 2;
 
     // Check close button with proper bounds checking
     final closeButtonBounds = Rect.fromLTWH(
@@ -275,7 +278,9 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
   StoreItem({
     required this.powerUpType,
     required Vector2 position,
-  }) : super(position: position, size: Vector2(240, 370)); // Even larger items for better spacing
+  }) : super(
+            position: position,
+            size: Vector2(240, 370)); // Even larger items for better spacing
 
   @override
   Future<void> onLoad() async {
@@ -309,7 +314,7 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
         ..style = PaintingStyle.fill,
     );
     add(itemGradient);
-    
+
     // Power-up visual - well spaced and larger
     final powerUpVisual = PowerUpVisual(type: powerUpType);
     powerUpVisual.position = Vector2(size.x / 2, 90); // More spacing from top
@@ -440,7 +445,9 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
     countText.text =
         'Owned: ${game.storeManager.getPowerUpCount(powerUpType)}/3';
 
-    final canPurchase = game.storeManager.canPurchase(powerUpType, game.sessionCoins);
+    // FIXED: Only check against total coins (no session coins in store)
+    final canPurchase =
+        game.storeManager.canPurchase(powerUpType, 0); // No session coins
     final maxReached = game.storeManager.getPowerUpCount(powerUpType) >= 3;
 
     if (maxReached) {
@@ -467,14 +474,9 @@ class StoreItem extends PositionComponent with HasGameReference<KangarooGame> {
     );
 
     if (buttonBounds.contains(itemLocalPoint.toOffset())) {
-      final success = game.storeManager.purchasePowerUpWithSessionCoins(
-        powerUpType, 
-        game.sessionCoins, 
-        (int usedSessionCoins) {
-          game.sessionCoins -= usedSessionCoins;
-        }
-      );
-      
+      // FIXED: Use the standard purchase method (no session coins in store)
+      final success = game.storeManager.purchasePowerUp(powerUpType);
+
       if (success) {
         // Simple purchase feedback - just a quick scale
         buyButton.add(

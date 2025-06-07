@@ -7,20 +7,20 @@ class StoreManager {
   static const String _doubleJumpCountKey = 'kangaroo_hop_double_jump_count';
   static const String _shieldCountKey = 'kangaroo_hop_shield_count';
   static const String _magnetCountKey = 'kangaroo_hop_magnet_count';
-  
+
   // Power-up prices
   static const int doubleJumpPrice = 75;
   static const int shieldPrice = 100;
   static const int magnetPrice = 50;
-  
+
   // Maximum items per power-up type
   static const int maxItemCount = 3;
-  
+
   int totalCoins = 0;
   int doubleJumpCount = 0;
   int shieldCount = 0;
   int magnetCount = 0;
-  
+
   Future<void> loadData() async {
     final prefs = await SharedPreferences.getInstance();
     totalCoins = prefs.getInt(_totalCoinsKey) ?? 0;
@@ -28,40 +28,13 @@ class StoreManager {
     shieldCount = prefs.getInt(_shieldCountKey) ?? 0;
     magnetCount = prefs.getInt(_magnetCountKey) ?? 0;
   }
-  
-  Future<void> saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_totalCoinsKey, totalCoins);
-    await prefs.setInt(_doubleJumpCountKey, doubleJumpCount);
-    await prefs.setInt(_shieldCountKey, shieldCount);
-    await prefs.setInt(_magnetCountKey, magnetCount);
-  }
-  
-  bool canPurchase(PowerUpType type, [int sessionCoins = 0]) {
+
+  bool purchasePowerUp(PowerUpType type) {
+    if (!canPurchase(type)) return false;
+
     final price = getPowerUpPrice(type);
-    final currentCount = getPowerUpCount(type);
-    final availableCoins = totalCoins + sessionCoins;
-    return availableCoins >= price && currentCount < maxItemCount;
-  }
-  
-  bool purchasePowerUpWithSessionCoins(PowerUpType type, int sessionCoins, Function(int) onSessionCoinsDeducted) {
-    if (!canPurchase(type, sessionCoins)) return false;
-    
-    final price = getPowerUpPrice(type);
-    
-    // Deduct from session coins first, then from total coins
-    int remainingPrice = price;
-    
-    if (sessionCoins > 0) {
-      final usedSessionCoins = remainingPrice > sessionCoins ? sessionCoins : remainingPrice;
-      onSessionCoinsDeducted(usedSessionCoins); // Tell caller to deduct session coins
-      remainingPrice -= usedSessionCoins;
-    }
-    
-    if (remainingPrice > 0) {
-      totalCoins -= remainingPrice;
-    }
-    
+    totalCoins -= price;
+
     switch (type) {
       case PowerUpType.doubleJump:
         doubleJumpCount++;
@@ -73,11 +46,63 @@ class StoreManager {
         magnetCount++;
         break;
     }
-    
+
     saveData();
     return true;
   }
-  
+
+  Future<void> saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_totalCoinsKey, totalCoins);
+    await prefs.setInt(_doubleJumpCountKey, doubleJumpCount);
+    await prefs.setInt(_shieldCountKey, shieldCount);
+    await prefs.setInt(_magnetCountKey, magnetCount);
+  }
+
+  bool canPurchase(PowerUpType type, [int sessionCoins = 0]) {
+    final price = getPowerUpPrice(type);
+    final currentCount = getPowerUpCount(type);
+    final availableCoins = totalCoins + sessionCoins;
+    return availableCoins >= price && currentCount < maxItemCount;
+  }
+
+  bool purchasePowerUpWithSessionCoins(PowerUpType type, int sessionCoins,
+      Function(int) onSessionCoinsDeducted) {
+    if (!canPurchase(type, sessionCoins)) return false;
+
+    final price = getPowerUpPrice(type);
+
+    // Deduct from session coins first, then from total coins
+    int remainingPrice = price;
+
+    if (sessionCoins > 0) {
+      final usedSessionCoins =
+          remainingPrice > sessionCoins ? sessionCoins : remainingPrice;
+      onSessionCoinsDeducted(
+          usedSessionCoins); // Tell caller to deduct session coins
+      remainingPrice -= usedSessionCoins;
+    }
+
+    if (remainingPrice > 0) {
+      totalCoins -= remainingPrice;
+    }
+
+    switch (type) {
+      case PowerUpType.doubleJump:
+        doubleJumpCount++;
+        break;
+      case PowerUpType.shield:
+        shieldCount++;
+        break;
+      case PowerUpType.magnet:
+        magnetCount++;
+        break;
+    }
+
+    saveData();
+    return true;
+  }
+
   bool usePowerUp(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
@@ -104,7 +129,7 @@ class StoreManager {
     }
     return false;
   }
-  
+
   int getPowerUpCount(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
@@ -115,7 +140,7 @@ class StoreManager {
         return magnetCount;
     }
   }
-  
+
   int getPowerUpPrice(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
@@ -126,7 +151,7 @@ class StoreManager {
         return magnetPrice;
     }
   }
-  
+
   String getPowerUpName(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
@@ -137,7 +162,7 @@ class StoreManager {
         return 'Coin Magnet';
     }
   }
-  
+
   String getPowerUpDescription(PowerUpType type) {
     switch (type) {
       case PowerUpType.doubleJump:
@@ -148,7 +173,7 @@ class StoreManager {
         return 'Attracts nearby coins!\nLasts 10 seconds';
     }
   }
-  
+
   void addCoins(int amount) {
     totalCoins += amount;
     saveData();
