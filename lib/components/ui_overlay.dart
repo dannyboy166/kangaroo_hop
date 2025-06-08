@@ -976,7 +976,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       if (buttonBounds.contains(worldPosition.toOffset())) {
         print('Game over play again button clicked!');
         AudioManager().playButtonClick();
-        game.startGame();
+        game.restart();
         return true;
       }
     }
