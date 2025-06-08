@@ -33,6 +33,10 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   late TextComponent menuStoreButtonText;
   late RectangleComponent gameOverStoreButton;
   late TextComponent gameOverStoreButtonText;
+  
+  // Play Again button
+  late RectangleComponent gameOverPlayAgainButton;
+  late TextComponent gameOverPlayAgainButtonText;
 
   // Power-up display in game
   late RectangleComponent powerUpPanel;
@@ -63,7 +67,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
   static final _coinRenderer = TextPaint(
     style: const TextStyle(
       color: Color(0xFFF7B027), // Custom gold color
-      fontSize: 24,
+      fontSize: 28,
       fontWeight: FontWeight.bold,
     ),
   );
@@ -155,20 +159,35 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       position: Vector2(20, 90),
     );
 
-    // Add coin image
+    // Add coin image with spinning animation
     Sprite.load('coin.png').then((coinSprite) {
       final coinImage = SpriteComponent(
         sprite: coinSprite,
         size: Vector2(30, 30),
-        position: Vector2(0, 2), // Vertically centered with text
+        position: Vector2(15, 17), // Centered within the icon area for rotation
+        anchor: Anchor.center,
       );
+      
+      // Add horizontal spinning animation like power-ups
+      coinImage.add(
+        ScaleEffect.to(
+          Vector2(-1, 1), // Flip horizontally for 3D spinning effect
+          EffectController(
+            duration: 2.0, // Slower than power-ups for UI element
+            reverseDuration: 2.0,
+            infinite: true,
+            curve: Curves.easeInOut,
+          ),
+        ),
+      );
+      
       coinContainer.add(coinImage);
     });
 
     // Coin text positioned next to image
     coinText = TextComponent(
       text: '${game.storeManager.totalCoins}',
-      position: Vector2(35, 5), // More space for larger coin
+      position: Vector2(40, 2), // More space for larger coin
       textRenderer: _coinRenderer,
     );
     coinContainer.add(coinText);
@@ -363,18 +382,18 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
       ),
     );
 
-    // STORE BUTTON - Much better positioned and sized
+    // STORE BUTTON - Much better positioned and sized (now red and positioned to the right)
     gameOverStoreButton = RectangleComponent(
       size: Vector2(220, 50), // Made wider and taller
-      position: Vector2(300, 270), // Moved up to make room
+      position: Vector2(450, 270), // Positioned to the right of play again button
       anchor: Anchor.center,
-      paint: Paint()..color = const Color(0xFF2ED573), // Modern green
+      paint: Paint()..color = const Color(0xFFE74C3C), // Modern red
     );
 
     // Add gradient effect to store button
     gameOverStoreButton.add(RectangleComponent(
       size: Vector2(220, 25),
-      paint: Paint()..color = const Color(0xFF7BED9F).withValues(alpha: 0.5),
+      paint: Paint()..color = const Color(0xFFEC7063).withValues(alpha: 0.5),
     ));
 
     // Add border to store button
@@ -407,9 +426,53 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     );
     gameOverStoreButton.add(gameOverStoreButtonText);
 
+    // PLAY AGAIN BUTTON - Identical to store button but positioned to the left
+    gameOverPlayAgainButton = RectangleComponent(
+      size: Vector2(220, 50), // Same size as store button
+      position: Vector2(150, 270), // Positioned to the left of store button
+      anchor: Anchor.center,
+      paint: Paint()..color = const Color(0xFF2ED573), // Same green for now, will change store to red
+    );
+
+    // Add gradient effect to play again button
+    gameOverPlayAgainButton.add(RectangleComponent(
+      size: Vector2(220, 25),
+      paint: Paint()..color = const Color(0xFF7BED9F).withValues(alpha: 0.5),
+    ));
+
+    // Add border to play again button
+    gameOverPlayAgainButton.add(RectangleComponent(
+      size: Vector2(220, 50),
+      paint: Paint()
+        ..color = const Color(0xFF4F9DFF) // Same blue as store
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    ));
+
+    gameOverPlayAgainButtonText = TextComponent(
+      text: 'PLAY AGAIN',
+      position: Vector2(110, 25),
+      anchor: Anchor.center,
+      textRenderer: TextPaint(
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 22, // Same size as store button
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black,
+              offset: Offset(2, 2),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+      ),
+    );
+    gameOverPlayAgainButton.add(gameOverPlayAgainButtonText);
+
     // RESTART TEXT - Moved down to make room
     restartText = TextComponent(
-      text: 'Tap anywhere else to Play Again',
+      text: 'or tap anywhere else to restart',
       position: Vector2(300, 340), // Moved down
       anchor: Anchor.center,
       textRenderer: TextPaint(
@@ -437,6 +500,7 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
     gameOverPanel.add(gameOverScore);
     gameOverPanel.add(gameOverHighScore);
     gameOverPanel.add(gameOverCoins);
+    gameOverPanel.add(gameOverPlayAgainButton);
     gameOverPanel.add(gameOverStoreButton);
     gameOverPanel.add(restartText);
   }
@@ -878,6 +942,41 @@ class UiOverlay extends PositionComponent with HasGameReference<KangarooGame> {
         print('Menu store button clicked!');
         AudioManager().playButtonClick();
         game.showStore();
+        return true;
+      }
+    }
+
+    // Check game over play again button
+    if (gameOverPlayAgainButton.parent != null && gameOverPanel.parent != null) {
+      // Get the game over panel's absolute position (center anchor)
+      final panelAbsolutePos = gameOverPanel.absolutePosition;
+      final panelCenterOffset = Vector2(
+        panelAbsolutePos.x - gameOverPanel.size.x / 2,
+        panelAbsolutePos.y - gameOverPanel.size.y / 2,
+      );
+
+      // Play again button position is relative to panel, with center anchor
+      final buttonRelativePos = gameOverPlayAgainButton.position;
+      final buttonAbsolutePos = Vector2(
+        panelCenterOffset.x +
+            buttonRelativePos.x -
+            gameOverPlayAgainButton.size.x / 2,
+        panelCenterOffset.y +
+            buttonRelativePos.y -
+            gameOverPlayAgainButton.size.y / 2,
+      );
+
+      final buttonBounds = Rect.fromLTWH(
+        buttonAbsolutePos.x,
+        buttonAbsolutePos.y,
+        gameOverPlayAgainButton.size.x,
+        gameOverPlayAgainButton.size.y,
+      );
+
+      if (buttonBounds.contains(worldPosition.toOffset())) {
+        print('Game over play again button clicked!');
+        AudioManager().playButtonClick();
+        game.startGame();
         return true;
       }
     }

@@ -159,12 +159,6 @@ class Kangaroo extends SpriteAnimationComponent
     final hitbox =
         RectangleHitbox(size: Vector2(60, 30), position: Vector2(55, 80));
 
-    // Make the collision box visible for testing
-    hitbox.paint = Paint()
-      ..color = Colors.red.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    hitbox.renderShape = true;
 
     add(hitbox);
   }

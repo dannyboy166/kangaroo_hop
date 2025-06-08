@@ -657,7 +657,7 @@ class KangarooGame extends FlameGame
   }
 
   void collectCoin() {
-    sessionCoins += 20; // Each coin is worth 5! (but only for this session)
+    sessionCoins += 5; // Each coin is worth 5! (but only for this session)
 
     // Update UI to show total coins
     uiOverlay.updateCoins();
