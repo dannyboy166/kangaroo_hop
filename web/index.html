@@ -18,21 +18,72 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Kangaroo Hop Adventure Game">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="kangaroo_hop">
+  
+  <!-- PWA meta tags for better mobile support -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="web-app-capable" content="yes">
+  
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>kangaroo_hop</title>
+  <title>Kangaroo Hop Adventure</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      overflow: hidden;
+    }
+  </style>
+
+  <!-- AUDIO OPTIMIZATION SCRIPT FOR LOW LATENCY -->
+  <script>
+    // Reduce audio latency on supported browsers
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.AudioContext || window.webkitAudioContext) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let context;
+        
+        // Function to initialize audio context with low latency settings
+        function initAudioContext() {
+          if (!context) {
+            context = new AudioContext({
+              latencyHint: 'interactive', // Optimize for low latency
+              sampleRate: 44100
+            });
+          }
+          
+          if (context.state === 'suspended') {
+            context.resume().then(() => {
+              console.log('Audio context resumed for low latency gaming');
+            });
+          }
+        }
+        
+        // Initialize audio context on ANY user interaction
+        const events = ['click', 'touchstart', 'keydown', 'mousedown', 'touchend'];
+        events.forEach(event => {
+          document.addEventListener(event, initAudioContext, { passive: true });
+        });
+        
+        // Also try to initialize after a short delay
+        setTimeout(initAudioContext, 1000);
+      }
+    });
+  </script>
 </head>
 <body>
+  <!-- Keep your modern Flutter bootstrap approach -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

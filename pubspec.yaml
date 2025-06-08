@@ -62,8 +62,18 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/audio/sfx/
-    - assets/audio/music/
+    # Audio files - list each file explicitly for web compatibility
+    - assets/audio/sfx/button_click.mp3
+    - assets/audio/sfx/coin_collect.mp3
+    - assets/audio/sfx/collision.mp3
+    - assets/audio/sfx/double_jump.mp3
+    - assets/audio/sfx/game_over.mp3
+    - assets/audio/sfx/jump.mp3
+    - assets/audio/sfx/land.mp3
+    - assets/audio/sfx/magnet_activate.mp3
+    - assets/audio/sfx/shield_activate.mp3
+    
+    # Image assets
     - assets/images/kangaroo_animations.png
     - assets/images/cactus.png
     - assets/images/croc.png

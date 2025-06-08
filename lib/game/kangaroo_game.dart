@@ -5,6 +5,8 @@ import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flame/particles.dart';
+import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -73,8 +75,8 @@ class KangarooGame extends FlameGame
   final List<PowerUp> _powerUps = [];
   final List<Cloud> _clouds = [];
 
-  // Performance: Reduce particle effects at high speeds
-  bool get shouldReduceEffects => gameSpeed > 500;
+  bool get shouldReduceEffects =>
+      kIsWeb || gameSpeed > 500; // Force reduction for web
 
   @override
   Color backgroundColor() => const Color(0xFF87CEEB);
@@ -181,19 +183,28 @@ class KangarooGame extends FlameGame
   }
 
   void handleJumpInput() {
+    // IMMEDIATE audio call - don't wait for animation
+    if (gameState == GameState.playing) {
+      AudioManager().playJump(); // Call FIRST for immediate response
+      kangaroo.jump(); // Then process jump
+      return; // Exit early for playing state
+    }
+
+    AudioManager().initializeAudio(); // Initialize on any input
+
     switch (gameState) {
       case GameState.menu:
-        AudioManager().playButtonClick();
+        AudioManager().playButtonClick(); // Immediate click sound
         startGame();
-        break;
-      case GameState.playing:
-        kangaroo.jump();
         break;
       case GameState.gameOver:
         if (!gameOverTriggered) {
-          AudioManager().playButtonClick();
+          AudioManager().playButtonClick(); // Immediate click sound
           restart();
         }
+        break;
+      case GameState.playing:
+        // Already handled above
         break;
     }
   }
@@ -201,7 +212,7 @@ class KangarooGame extends FlameGame
   void showMenu() {
     gameState = GameState.menu;
     kangaroo.reset();
-    gameSpeed = 0.0; // Stop background movement in menu
+    gameSpeed = 0.0;
     speedMultiplier = 1.0;
     distanceTraveled = 0.0;
     gameOverTriggered = false;
@@ -221,12 +232,28 @@ class KangarooGame extends FlameGame
     ground.gameSpeed = 0.0;
 
     uiOverlay.showMenu();
-
-    // Update high score display in menu
     uiOverlay.highScoreText.text = 'Best: $highScore';
-
-    // Update coin display
     uiOverlay.updateCoins();
+
+    // PRE-WARM audio system for web (ADD THIS)
+    if (kIsWeb) {
+      _prewarmAudio();
+    }
+  }
+
+  void _prewarmAudio() async {
+    // Play sounds at 0 volume to initialize audio buffers
+    try {
+      await Future.delayed(Duration(milliseconds: 100));
+      FlameAudio.play('sfx/jump.mp3', volume: 0.0);
+      await Future.delayed(Duration(milliseconds: 50));
+      FlameAudio.play('sfx/coin_collect.mp3', volume: 0.0);
+      await Future.delayed(Duration(milliseconds: 50));
+      FlameAudio.play('sfx/button_click.mp3', volume: 0.0);
+      print('Audio pre-warming complete');
+    } catch (e) {
+      print('Audio prewarm failed: $e');
+    }
   }
 
   void startGame() {
@@ -657,15 +684,13 @@ class KangarooGame extends FlameGame
   }
 
   void collectCoin() {
-    sessionCoins += 5; // Each coin is worth 5! (but only for this session)
-
-    // Update UI to show total coins
-    uiOverlay.updateCoins();
-
-    // Play coin collect sound with current game speed for smart throttling
+    // IMMEDIATE audio response
     AudioManager().playCoinCollect(gameSpeed: gameSpeed);
 
-    // Performance: Skip particles if reducing effects
+    sessionCoins += 5;
+    uiOverlay.updateCoins();
+
+    // Skip particles if reducing effects
     if (shouldReduceEffects) return;
 
     // Add particle effect
@@ -726,15 +751,13 @@ class KangarooGame extends FlameGame
 
   void onObstacleCollision(ObstacleType obstacleType) {
     if (gameState == GameState.playing) {
+      // IMMEDIATE audio response
+      AudioManager().playCollision();
+
       if (kangaroo.hasAnyShield) {
         kangaroo.removeOneShield();
-        // Play collision sound for shield break
-        AudioManager().playCollision();
-        // Add shield break effect
         addShieldBreakParticles();
       } else {
-        // Play collision sound before game over
-        AudioManager().playCollision();
         gameOver(obstacleType);
       }
     }
